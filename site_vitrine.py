@@ -118,20 +118,27 @@ if st.session_state.page_actuelle == "ACCUEIL":
     with col1:
         st.markdown('<div class="card-capsule">👤<h4>Mon Profil & Panier</h4><p>Gérez vos mensurations et vos sélections de vêtements de luxe.</p></div>', unsafe_allow_html=True)
         if st.button("Ouvrir mon espace", key="go_profil", use_container_width=True):
-            changer_page("MON PROFIL & PANIER"); st.rerun()
+            changer_page("MON PROFIL & PANIER")
+            st.rerun()
     with col2:
         st.markdown('<div class="card-capsule">📦<h4>Suivi Commandes</h4><p>Suivez l\'avancement de vos confections en temps réel dans l\'atelier.</p></div>', unsafe_allow_html=True)
         if st.button("Suivre mes commandes", key="go_commandes", use_container_width=True):
-            changer_page("📦 SUIVI DES COMMANDES"); st.rerun()
+            changer_page("📦 SUIVI DES COMMANDES")
+            st.rerun()
     with col3:
         st.markdown('<div class="card-capsule">🧥<h4>Galerie Modèles</h4><p>Découvrez nos collections exclusives de boubous et costumes.</p></div>', unsafe_allow_html=True)
         if st.button("Voir la collection", key="go_galerie", use_container_width=True):
-            changer_page("COLLECTIONS (GALERIE)"); st.rerun()
+            changer_page("COLLECTIONS (GALERIE)")
+            st.rerun()
 
 # ==========================================
 # 2. GALERIE MODÈLES
 # ==========================================
 elif st.session_state.page_actuelle == "COLLECTIONS (GALERIE)":
+    if st.button("⬅️ Retour à l'Accueil", key="ret_galerie"):
+        changer_page("ACCUEIL")
+        st.rerun()
+        
     st.markdown("<h1 style='text-align: center; color: #d4af37;'>MODÈLES & CRÉATIONS</h1>", unsafe_allow_html=True)
     
     modeles = donnees.get("modeles", [])
@@ -149,7 +156,6 @@ elif st.session_state.page_actuelle == "COLLECTIONS (GALERIE)":
                 st.write(mod["description"])
                 st.markdown(f"<p style='color:#d4af37; font-weight:bold; font-size:18px;'>{int(mod['prix']):,} FCFA</p>".replace(",", " "), unsafe_allow_html=True)
                 
-                # Système d'ajout ou retrait du panier
                 if mod in st.session_state.panier:
                     if st.button(f"🗑️ Retirer du panier", key=f"rm_{mod['id']}", use_container_width=True):
                         st.session_state.panier.remove(mod)
@@ -170,6 +176,10 @@ elif st.session_state.page_actuelle == "COLLECTIONS (GALERIE)":
 # 3. PROFIL & PANIER CLIENT
 # ==========================================
 elif st.session_state.page_actuelle == "MON PROFIL & PANIER":
+    if st.button("⬅️ Retour à l'Accueil", key="ret_profil"):
+        changer_page("ACCUEIL")
+        st.rerun()
+        
     if st.session_state.client_connecte is None:
         st.warning("Veuillez vous connecter dans l'Espace Client sur la barre latérale gauche pour voir votre profil et votre panier.")
     else:
@@ -182,7 +192,6 @@ elif st.session_state.page_actuelle == "MON PROFIL & PANIER":
             client_data = donnees["clients"].get(nom_c, {"telephone": "", "mesures_haut": {}, "mesures_bas": {}})
             st.write(f"**Téléphone enregistré :** {client_data.get('telephone', 'Non renseigné')}")
             
-            # Formulaire permettant au client de modifier lui-même son profil
             st.write("### ✏️ Modifier mes mensurations")
             with st.form("modif_mesures_client"):
                 nv_tel = st.text_input("Mettre à jour mon téléphone :", value=client_data.get("telephone", ""))
@@ -191,7 +200,6 @@ elif st.session_state.page_actuelle == "MON PROFIL & PANIER":
                 mesures_haut_maj = {}
                 mesures_bas_maj = {}
                 
-                # Listes de mesures de base par défaut si vides
                 champs_haut = ["Cou", "Poitrine", "Épaule", "Longueur Manche", "Tour de Bras"]
                 champs_bas = ["Taille", "Hanche", "Cuisse", "Longueur Pantalon", "Entrejambe"]
                 
@@ -209,7 +217,6 @@ elif st.session_state.page_actuelle == "MON PROFIL & PANIER":
                 if st.form_submit_button("Enregistrer mes modifications"):
                     donnees["clients"][nom_c] = {
                         "telephone": nv_tel,
-                        "mesures_haut": "%s" % mesures_haut_maj, # Sauvegarde propre
                         "mesures_haut": mesures_haut_maj,
                         "mesures_bas":  mesures_bas_maj
                     }
@@ -237,7 +244,6 @@ elif st.session_state.page_actuelle == "MON PROFIL & PANIER":
                 st.markdown(f"### 💰 TOTAL À PAYER : <span style='color:#d4af37;'>{total_panier:,} FCFA</span>".replace(",", " "), unsafe_allow_html=True)
                 
                 if st.button("🚀 VALIDER LA COMMANDE ET ENVOYER À L'ATELIER", use_container_width=True):
-                    # Génération automatique des commandes reçues
                     if "commandes" not in donnees:
                         donnees["commandes"] = {}
                     
@@ -253,19 +259,22 @@ elif st.session_state.page_actuelle == "MON PROFIL & PANIER":
                         }
                     
                     sauvegarder_donnees(donnees)
-                    st.session_state.panier = [] # Vider le panier
-                    st.success("🎉 Commande envoyée avec succès ! Le tailleur vient de la recevoir dans son panneau.")
+                    st.session_state.panier = []
+                    st.success("🎉 Commande envoyée avec succès !")
                     st.rerun()
             else:
-                st.info("Votre panier est vide. Visitez l'onglet 'COLLECTIONS' pour ajouter des articles.")
+                st.info("Votre panier est vide.")
 
 # ==========================================
 # 4. SUIVI DE COMMANDES
 # ==========================================
 elif st.session_state.page_actuelle == "📦 SUIVI DES COMMANDES":
+    if st.button("⬅️ Retour à l'Accueil", key="ret_suivi"):
+        changer_page("ACCUEIL")
+        st.rerun()
+        
     st.markdown("<h1 style='text-align: center; color: #d4af37;'>📦 SUIVI DE VOS CONFECTIONS</h1>", unsafe_allow_html=True)
     
-    # Recherche automatique si connecté, sinon manuelle
     nom_rech = st.session_state.client_connecte if st.session_state.client_connecte else st.text_input("Entrez votre Nom Complet pour le suivi :").strip().upper()
     
     if nom_rech:
@@ -292,9 +301,13 @@ elif st.session_state.page_actuelle == "📦 SUIVI DES COMMANDES":
             st.info("Aucune commande enregistrée pour ce nom.")
 
 # ==========================================
-# 5. PARAMÈTRES / INTERFACE PRIVÉE DU TAILLEUR (TOTAL CONTROLE)
+# 5. PARAMÈTRES / INTERFACE PRIVÉE DU TAILLEUR
 # ==========================================
 elif st.session_state.page_actuelle == "⚙️ PARAMÈTRES":
+    if st.button("⬅️ Retour à l'Accueil", key="ret_admin"):
+        changer_page("ACCUEIL")
+        st.rerun()
+        
     st.markdown("<h1 style='color: #d4af37;'>WORKSHOP INTERFACE (PRO)</h1>", unsafe_allow_html=True)
     mdp = st.text_input("Code secret de l'atelier :", type="password")
     
@@ -307,7 +320,9 @@ elif st.session_state.page_actuelle == "⚙️ PARAMÈTRES":
             nv_titre = st.text_input("Titre principal de la vitrine :", value=config.get("titre_principal", "L'ÉLÉGANCE MASCULINE, REDÉFINIE."))
             if st.button("Publier le nouveau titre"):
                 donnees["configuration"]["titre_principal"] = nv_titre
-                sauvegarder_donnees(donnees); st.success("Mis à jour !"); st.rerun()
+                sauvegarder_donnees(donnees)
+                st.success("Mis à jour !")
+                st.rerun()
                 
         with tab2:
             st.write("### 🧥 Publier un nouveau modèle dans la galerie")
@@ -322,18 +337,19 @@ elif st.session_state.page_actuelle == "⚙️ PARAMÈTRES":
                             "id": f"mod_{len(donnees['modeles'])+1}",
                             "nom": m_nom, "description": m_desc, "prix": int(m_prix), "image": m_img
                         })
-                        sauvegarder_donnees(donnees); st.success("Modèle publié !"); st.rerun()
+                        sauvegarder_donnees(donnees)
+                        st.success("Modèle publié !")
+                        st.rerun()
                         
         with tab3:
             st.write("### 👥 Consultation et édition des fiches clients")
             for c_nom, c_data in list(donnees.get("clients", {}).items()):
                 with st.expander(f"👤 CLIENT : {c_nom}"):
                     st.write(f"📞 Contact : {c_data.get('telephone')}")
-                    # Le tailleur a une visibilité complète sur les mesures définies
                     st.json(c_data)
                     
         with tab4:
-            st.write("### 📦 Commandes Reçues (Panier validés par les clients)")
+            st.write("### 📦 Commandes Reçues")
             cmds_all = donnees.get("commandes", {})
             if cmds_all:
                 for cid, cinfo in list(cmds_all.items()):
@@ -346,7 +362,9 @@ elif st.session_state.page_actuelle == "⚙️ PARAMÈTRES":
                         donnees["commandes"][cid]["statut"] = nv_statut
                         donnees["commandes"][cid]["avance"] = int(nv_avance)
                         donnees["commandes"][cid]["date_livraison"] = nv_date
-                        sauvegarder_donnees(donnees); st.success("Modifié !"); st.rerun()
+                        sauvegarder_donnees(donnees)
+                        st.success("Modifié !")
+                        st.rerun()
                     st.markdown("---")
             else:
                 st.info("Aucune commande reçue dans le système.")
