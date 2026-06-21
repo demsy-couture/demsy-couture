@@ -161,7 +161,7 @@ elif st.session_state.page_actuelle == "COLLECTIONS (GALERIE)":
                 st.write(mod["description"])
                 st.markdown(f"<p style='color:#d4af37; font-weight:bold;'>{int(mod['prix']):,} FCFA</p>".replace(",", " "), unsafe_allow_html=True)
                 if st.button(f"Commander {mod['nom']}", key=f"btn_{mod['id']}", use_container_width=True):
-                    st.success(f"Modèle sélectionné ! Contactez l'atelier de Cocody.")
+                    st.success(f"Modèle sélectionné ! Contactez l'atelier de abobo cie nord.")
                 st.markdown("</div>", unsafe_allow_html=True)
     else:
         st.info("Aucun modèle enregistré pour le moment.")
