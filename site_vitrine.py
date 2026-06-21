@@ -286,7 +286,8 @@ elif st.session_state.page_actuelle == "⚙️ PARAMÈTRES":
             st.session_state.admin_authentifie = False
             st.rerun()
             
-        tab1, tab2, tab3 = st.tabs(["🧥 Ajouter un modèle", "🗑️ Gérer / Supprimer", "👥 Clients & Commandes"])
+        # NOUVEAUTÉ : On crée 4 onglets, dont un dédié à la Base Clients
+        tab1, tab2, tab3, tab4 = st.tabs(["🧥 Ajouter un modèle", "🗑️ Gérer la vitrine", "👥 Base Clients", "📦 Suivi Commandes"])
         
         with tab1:
             with st.form("form_pub_modele"):
@@ -327,29 +328,76 @@ elif st.session_state.page_actuelle == "⚙️ PARAMÈTRES":
                 st.info("Aucun modèle enregistré.")
 
         with tab3:
-            st.write("### 👥 Commandes de l'atelier & Mesures")
+            st.write("### 👥 Annuaire et Base de données Clients")
+            
+            # FILTRE DE RECHERCHE
+            recherche = st.text_input("🔍 Rechercher un client (Nom ou Numéro de téléphone) :").strip().upper()
+            
+            clients_dict = donnees.get("clients", {})
+            commandes_dict = donnees.get("commandes", {})
+            
+            if not clients_dict:
+                st.info("Aucun client n'est encore enregistré dans la base.")
+            else:
+                for nom_client, infos in clients_dict.items():
+                    tel_client = infos.get('telephone', 'Non renseigné')
+                    
+                    # Logique du filtre
+                    if recherche and (recherche not in nom_client) and (recherche not in tel_client):
+                        continue # Passe au client suivant si ça ne correspond pas à la recherche
+                        
+                    # Vérifier si le client a une commande en cours
+                    cmds_client = {id_cmd: cmd for id_cmd, cmd in commandes_dict.items() if cmd['client'] == nom_client}
+                    indicateur_commande = "🟢 OUI" if cmds_client else "🔴 NON"
+                    
+                    # ACCORDÉON (Clic pour ouvrir le profil)
+                    with st.expander(f"👤 {nom_client} | 📞 {tel_client} | Commande en cours : {indicateur_commande}"):
+                        col_h, col_b = st.columns(2)
+                        
+                        # Affichage des mesures
+                        with col_h:
+                            st.markdown("**📏 Haut du corps :**")
+                            mesures_haut = infos.get("mesures_haut", {})
+                            if mesures_haut:
+                                for k, v in mesures_haut.items():
+                                    if v > 0: st.write(f"- {k} : {v} cm")
+                            else:
+                                st.write("Aucune mesure")
+                                
+                        with col_b:
+                            st.markdown("**📐 Bas du corps :**")
+                            mesures_bas = infos.get("mesures_bas", {})
+                            if mesures_bas:
+                                for k, v in mesures_bas.items():
+                                    if v > 0: st.write(f"- {k} : {v} cm")
+                            else:
+                                st.write("Aucune mesure")
+                        
+                        # Affichage des commandes spécifiques à ce client
+                        if cmds_client:
+                            st.markdown("---")
+                            st.markdown("#### 📦 État des commandes de ce client :")
+                            for id_cmd, cmd in cmds_client.items():
+                                st.info(f"**N° {id_cmd}** ({cmd['modele']}) | Statut actuel : **{cmd['statut']}**")
+
+        with tab4:
+            st.write("### 📦 Mettre à jour l'évolution des commandes")
             commandes_dict = donnees.get("commandes", {})
             if commandes_dict:
                 for id_cmd, cmd in list(commandes_dict.items()):
-                    with st.expander(f"📦 Commande {id_cmd} — Client : {cmd['client']}"):
+                    with st.expander(f"⚙️ Commande {id_cmd} — Client : {cmd['client']}"):
                         st.write(f"**Modèle commandé :** {cmd['modele']}")
                         st.write(f"**Prix total :** {cmd['prix']} FCFA")
                         
-                        # Affichage des mesures du client si elles existent
-                        client_m = donnees["clients"].get(cmd['client'], {})
-                        st.write(f"📞 **Téléphone client :** {client_m.get('telephone', 'Inconnu')}")
-                        st.write("**Mesures Haut :**", client_m.get("mesures_haut", "Aucune"))
-                        st.write("**Mesures Bas :**", client_m.get("mesures_bas", "Aucune"))
-                        
                         # Modification du statut et de l'avance
-                        nv_avance = st.number_input(f"Avance reçue (FCFA) pour {id_cmd} :", value=int(cmd.get('avance', 0)), step=5000, key=f"av_{id_cmd}")
+                        nv_avance = st.number_input(f"Avance reçue (FCFA) :", value=int(cmd.get('avance', 0)), step=5000, key=f"av_{id_cmd}")
                         nv_statut = st.selectbox(f"Statut confection :", ["En attente", "En coupe", "Au montage", "Finitions", "Prêt !"], index=["En attente", "En coupe", "Au montage", "Finitions", "Prêt !"].index(cmd.get('statut', 'En attente')), key=f"st_{id_cmd}")
                         
-                        if st.button("💾 Enregistrer la commande", key=f"save_{id_cmd}"):
+                        if st.button("💾 Mettre à jour la commande", key=f"save_{id_cmd}"):
                             donnees["commandes"][id_cmd]["avance"] = int(nv_avance)
                             donnees["commandes"][id_cmd]["statut"] = nv_statut
                             sauvegarder_donnees(donnees)
-                            st.success("Commande mise à jour !")
+                            st.success("Statut de la commande mis à jour !")
                             st.rerun()
             else:
                 st.info("Aucune commande en cours à l'atelier.")
