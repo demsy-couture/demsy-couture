@@ -1,0 +1,44 @@
+{
+    "configuration": {
+        "titre_principal": "\" L'ART de l'élégance masculine, entre tradition et modernité.\"",
+        "sous_titre": "DEMSY COUTURE AU MASCULIN",
+        "contact_tel1": "+225 01 23 45 67 89",
+        "contact_tel2": "+225 05 00 00 00 00",
+        "contact_email": "demsy@clothing.com",
+        "adresse": "Abidjan, Cocody, Côte d'Ivoire"
+    },
+    "modeles": [
+         {
+            "id": "mod_1",
+            "nom": "COSTUME CROISER ",
+            "description": "Costume croisé d'exception de couleur rouge bordeaux,sur mesure. avec des poches plaquées modernes deux boutons. Une création idéale pour affirmer votre style lors des grands rendez-vous.",
+            "prix": "45000",
+            "image": "images/costume.jpg.jpg"
+        }
+    ],
+    "clients": {
+        "DÉMÉTRIUS SISSOKO": {
+            "telephone": "+225 01 23 45 67 89",
+            "mesures_haut": {
+                "Épaule": 48,
+                "Longueur de Manche": 64,
+                "Tour de Manche": 22,
+                "Poitrine": 102,
+                "Ventre": 94,
+                "Longueur Haut": 76,
+                "Col": 42,
+                "Dos": 50
+            },
+            "mesures_bas": {
+                "Ceinture": 96,
+                "Bassin": 110,
+                "Cuisse": 62,
+                "Longueur Bas": 108,
+                "Mollet": 38,
+                "Bas": 20,
+                "Frappe": 82
+            }
+        }
+    },
+    "commandes": {}
+}
