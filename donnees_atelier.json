@@ -7,15 +7,7 @@
         "contact_email": "demsy@clothing.com",
         "adresse": "Abidjan, Cocody, Côte d'Ivoire"
     },
-    "modeles": [
-         {
-            "id": "mod_1",
-            "nom": "COSTUME CROISER ",
-            "description": "Costume croisé d'exception de couleur rouge bordeaux,sur mesure. avec des poches plaquées modernes deux boutons. Une création idéale pour affirmer votre style lors des grands rendez-vous.",
-            "prix": "45000",
-            "image": "images/costume.jpg.jpg"
-        }
-    ],
+   "modeles": [],
     "clients": {
         "DÉMÉTRIUS SISSOKO": {
             "telephone": "+225 01 23 45 67 89",
