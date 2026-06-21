@@ -1,6 +1,7 @@
 import streamlit as st
 import json
 import os
+import base64
 
 # Configuration de la page
 st.set_page_config(
@@ -147,8 +148,11 @@ elif st.session_state.page_actuelle == "COLLECTIONS (GALERIE)":
         for idx, mod in enumerate(modeles):
             with cols[idx % 3]:
                 st.markdown("<div class='card-capsule'>", unsafe_allow_html=True)
-                if mod["image"].startswith("http"):
-                    st.image(mod["image"], use_container_width=True)
+                
+                # Gestion de l'affichage (Lien web ou Base64 encodé local)
+                img_data = mod["image"]
+                if img_data.startswith("data:image") or img_data.startswith("http"):
+                    st.image(img_data, use_container_width=True)
                 else:
                     st.markdown("<div style='height:180px; background-color:#222; display:flex; align-items:center; justify-content:center; color:#fff; border-radius:5px;'>✨ Modèle d'Élite</div>", unsafe_allow_html=True)
                 
@@ -330,16 +334,35 @@ elif st.session_state.page_actuelle == "⚙️ PARAMÈTRES":
                 m_nom = st.text_input("Nom de la création :")
                 m_desc = st.text_area("Description du tissu / coupe :")
                 m_prix = st.number_input("Prix de vente (FCFA) :", min_value=0, step=5000, value=125000)
-                m_img = st.text_input("Lien internet de l'image (Ex: https://...) :", value="")
+                
+                st.markdown("---")
+                st.markdown("##### 📸 Source de la Photo (Choisissez une seule option)")
+                m_file = st.file_uploader("Option A : Charger depuis votre ordinateur (images/...)", type=["png", "jpg", "jpeg"])
+                m_img = st.text_input("Option B : Ou coller un lien internet (Ex: Pinterest https://...) :", value="")
+                st.markdown("---")
+                
                 if st.form_submit_button("Mettre en vitrine publique"):
                     if m_nom:
-                        donnees["modeles"].append({
-                            "id": f"mod_{len(donnees['modeles'])+1}",
-                            "nom": m_nom, "description": m_desc, "prix": int(m_prix), "image": m_img
-                        })
-                        sauvegarder_donnees(donnees)
-                        st.success("Modèle publié !")
-                        st.rerun()
+                        final_img = ""
+                        # Si l'utilisateur charge un fichier local
+                        if m_file is not None:
+                            bytes_data = m_file.getvalue()
+                            b64_img = base64.b64encode(bytes_data).decode("utf-8")
+                            ext = m_file.name.split(".")[-1]
+                            final_img = f"data:image/{ext};base64,{b64_img}"
+                        else:
+                            final_img = m_img
+                            
+                        if final_img:
+                            donnees["modeles"].append({
+                                "id": f"mod_{len(donnees['modeles'])+1}",
+                                "nom": m_nom, "description": m_desc, "prix": int(m_prix), "image": final_img
+                            })
+                            sauvegarder_donnees(donnees)
+                            st.success("Modèle publié avec succès !")
+                            st.rerun()
+                        else:
+                            st.error("Veuillez fournir une image (Fichier ou Lien).")
                         
         with tab3:
             st.write("### 👥 Consultation et édition des fiches clients")
