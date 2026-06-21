@@ -127,6 +127,10 @@ if st.session_state.page_actuelle == "ACCUEIL":
 
 # 2. GALERIE
 elif st.session_state.page_actuelle == "COLLECTIONS (GALERIE)":
+    if st.button("⬅️ Retour à l'Accueil", key="ret_galerie"):
+        changer_page("ACCUEIL")
+        st.rerun()
+        
     st.markdown("<h1 style='text-align: center; color: #d4af37;'>MODÈLES & CRÉATIONS</h1>", unsafe_allow_html=True)
     modeles = donnees.get("modeles", [])
     if modeles:
@@ -157,14 +161,24 @@ elif st.session_state.page_actuelle == "COLLECTIONS (GALERIE)":
 
 # 3. PROFIL & PANIER
 elif st.session_state.page_actuelle == "MON PROFIL & PANIER":
-    st.write("Espace Profil et Panier")
+    if st.button("⬅️ Retour à l'Accueil", key="ret_profil"):
+        changer_page("ACCUEIL")
+        st.rerun()
+    st.write("Espace Profil et Panier temporairement indisponible pendant la maintenance.")
 
 # 4. SUIVI COMMANDES
 elif st.session_state.page_actuelle == "📦 SUIVI DES COMMANDES":
-    st.write("Suivi des commandes")
+    if st.button("⬅️ Retour à l'Accueil", key="ret_suivi"):
+        changer_page("ACCUEIL")
+        st.rerun()
+    st.write("Suivi des commandes temporairement indisponible pendant la maintenance.")
 
 # 5. PARAMÈTRES (ADMIN)
 elif st.session_state.page_actuelle == "⚙️ PARAMÈTRES":
+    if st.button("⬅️ Retour à l'Accueil", key="ret_admin"):
+        changer_page("ACCUEIL")
+        st.rerun()
+        
     st.markdown("<h1 style='color: #d4af37;'>WORKSHOP INTERFACE (PRO)</h1>", unsafe_allow_html=True)
     mdp = st.text_input("Code secret de l'atelier :", type="password")
     
