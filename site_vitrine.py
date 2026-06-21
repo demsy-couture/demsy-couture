@@ -193,8 +193,8 @@ elif st.session_state.page_actuelle == "MON PROFIL & PANIER":
                 colh, colb = st.columns(2)
                 mesures_haut_maj = {}
                 mesures_bas_maj = {}
-                champs_haut = ["Cou", "Poitrine", "Épaule", "Longueur Manche", "Tour de Bras"]
-                champs_bas = ["Taille", "Hanche", "Cuisse", "Longueur Pantalon", "Entrejambe"]
+                champs_haut = ["Epaule", "Longueurr de manche", "Tour de manche", "Poitrine", "ventre", "Longueure haut", "Cole", "dos"]
+                champs_bas = ["Ceinture", "Bassin", "Cuisse", "Longueur bas", "Mollet", "Bas", "Frappe"]
                 
                 with colh:
                     st.markdown("##### 📏 Haut du corps (en cm)")
