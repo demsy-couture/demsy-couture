@@ -18,9 +18,11 @@ def charger_donnees():
     if os.path.exists(FICHIER_DONNEES):
         with open(FICHIER_DONNEES, "r", encoding="utf-8") as f:
             try:
-                return json.load(f)
-            except:
-                pass
+                contenu = f.read().strip()
+                if contenu:
+                    return json.loads(contenu)
+            except Exception as e:
+                st.error(f"Erreur de lecture de la base de données : {e}")
     return {"configuration": {}, "modeles": [], "clients": {}, "commandes": {}}
 
 def sauvegarder_donnees(donnees):
@@ -29,6 +31,30 @@ def sauvegarder_donnees(donnees):
 
 donnees = charger_donnees()
 config = donnees.get("configuration", {})
+
+# Liste officielle des pages
+liste_pages = ["ACCUEIL", "COLLECTIONS (GALERIE)", "MON PROFIL & PANIER", "📦 SUIVI DES COMMANDES", "⚙️ PARAMÈTRES"]
+
+# --- FONCTIONS DE NAVIGATION (CALLBACKS) ---
+def changer_page(nouvelle_page):
+    st.session_state.page_actuelle = nouvelle_page
+    st.session_state.nav_radio = nouvelle_page
+
+def connexion_client(nom, tel):
+    nom_clean = nom.strip().upper()
+    if nom_clean:
+        st.session_state.client_connecte = nom_clean
+        if nom_clean not in donnees["clients"]:
+            donnees["clients"][nom_clean] = {"telephone": tel, "mesures_haut": {}, "mesures_bas": {}}
+            sauvegarder_donnees(donnees)
+        st.session_state.page_actuelle = "ACCUEIL"
+        st.session_state.nav_radio = "ACCUEIL"
+
+def deconnexion_client():
+    st.session_state.client_connecte = None
+    st.session_state.panier = []
+    st.session_state.page_actuelle = "ACCUEIL"
+    st.session_state.nav_radio = "ACCUEIL"
 
 # --- INITIALISATION DES SESSIONS ---
 if "page_actuelle" not in st.session_state:
@@ -44,31 +70,18 @@ st.sidebar.write("---")
 
 st.sidebar.write("### 🔑 Espace Client")
 if st.session_state.client_connecte is None:
-    nom_saisi = st.sidebar.text_input("Votre Nom Complet :", key="connexion_nom").strip().upper()
-    tel_saisi = st.sidebar.text_input("Votre Téléphone :", key="connexion_tel").strip()
-    if st.sidebar.button("Se connecter / S'inscrire"):
-        if nom_saisi:
-            st.session_state.client_connecte = nom_saisi
-            if nom_saisi not in donnees["clients"]:
-                donnees["clients"][nom_saisi] = {"telephone": tel_saisi, "mesures_haut": {}, "mesures_bas": {}}
-                sauvegarder_donnees(donnees)
-            st.session_state.page_actuelle = "ACCUEIL"
-            st.rerun()
+    nom_saisi = st.sidebar.text_input("Votre Nom Complet :", value="", key="connexion_nom")
+    tel_saisi = st.sidebar.text_input("Votre Téléphone :", value="", key="connexion_tel").strip()
+    st.sidebar.button("Se connecter / S'inscrire", on_click=connexion_client, args=(nom_saisi, tel_saisi))
 else:
     st.sidebar.success(f"Connecté : {st.session_state.client_connecte}")
-    if st.sidebar.button("❌ Se déconnecter"):
-        st.session_state.client_connecte = None
-        st.session_state.panier = []
-        st.session_state.page_actuelle = "ACCUEIL"
-        st.rerun()
+    st.sidebar.button("❌ Se déconnecter", on_click=deconnexion_client)
 
 st.sidebar.write("---")
 theme_choisi = st.sidebar.selectbox("🎨 Style visuel :", ["Sombre & Or", "Clair & Prestige"])
 st.sidebar.write("---")
 
-# Liste des pages
-liste_pages = ["ACCUEIL", "COLLECTIONS (GALERIE)", "MON PROFIL & PANIER", "📦 SUIVI DES COMMANDES", "⚙️ PARAMÈTRES"]
-
+# Gestion de l'index du menu radio basé sur la session globale
 if st.session_state.page_actuelle in liste_pages:
     index_page = liste_pages.index(st.session_state.page_actuelle)
 else:
@@ -81,10 +94,8 @@ menu = st.sidebar.radio(
     key="nav_radio"
 )
 
-# Synchronisation si clic sur la sidebar
 if menu != st.session_state.page_actuelle:
     st.session_state.page_actuelle = menu
-    st.rerun()
 
 # --- THEMATISATION DES COULEURS ---
 if theme_choisi == "Sombre & Or":
@@ -120,27 +131,19 @@ if st.session_state.page_actuelle == "ACCUEIL":
     col1, col2, col3 = st.columns(3)
     with col1:
         st.markdown('<div class="card-capsule">👤<h4>Mon Profil & Panier</h4><p>Gérez vos mensurations et vos sélections.</p></div>', unsafe_allow_html=True)
-        if st.button("Ouvrir mon espace", key="go_profil", use_container_width=True):
-            st.session_state.page_actuelle = "MON PROFIL & PANIER"
-            st.rerun()
+        st.button("Ouvrir mon espace", key="go_profil", use_container_width=True, on_click=changer_page, args=("MON PROFIL & PANIER",))
     with col2:
         st.markdown('<div class="card-capsule">📦<h4>Suivi Commandes</h4><p>Suivez vos confections en temps réel.</p></div>', unsafe_allow_html=True)
-        if st.button("Suivre mes commandes", key="go_commandes", use_container_width=True):
-            st.session_state.page_actuelle = "📦 SUIVI DES COMMANDES"
-            st.rerun()
+        st.button("Suivre mes commandes", key="go_commandes", use_container_width=True, on_click=changer_page, args=("📦 SUIVI DES COMMANDES",))
     with col3:
         st.markdown('<div class="card-capsule">🧥<h4>Galerie Modèles</h4><p>Découvrez nos collections exclusives.</p></div>', unsafe_allow_html=True)
-        if st.button("Voir la collection", key="go_galerie", use_container_width=True):
-            st.session_state.page_actuelle = "COLLECTIONS (GALERIE)"
-            st.rerun()
+        st.button("Voir la collection", key="go_galerie", use_container_width=True, on_click=changer_page, args=("COLLECTIONS (GALERIE)",))
 
 # 2. GALERIE
 elif st.session_state.page_actuelle == "COLLECTIONS (GALERIE)":
-    if st.button("⬅️ Retour à l'Accueil", key="btn_ret_galerie"):
-        st.session_state.page_actuelle = "ACCUEIL"
-        st.rerun()
-        
+    st.button("⬅️ Retour à l'Accueil", key="btn_ret_galerie", on_click=changer_page, args=("ACCUEIL",))
     st.markdown("<h1 style='text-align: center; color: #d4af37;'>MODÈLES & CRÉATIONS</h1>", unsafe_allow_html=True)
+    
     modeles = donnees.get("modeles", [])
     if modeles:
         cols = st.columns(3)
@@ -170,10 +173,8 @@ elif st.session_state.page_actuelle == "COLLECTIONS (GALERIE)":
 
 # 3. PROFIL & PANIER CLIENT
 elif st.session_state.page_actuelle == "MON PROFIL & PANIER":
-    if st.button("⬅️ Retour à l'Accueil", key="btn_ret_profil"):
-        st.session_state.page_actuelle = "ACCUEIL"
-        st.rerun()
-        
+    st.button("⬅️ Retour à l'Accueil", key="btn_ret_profil", on_click=changer_page, args=("ACCUEIL",))
+    
     if st.session_state.client_connecte is None:
         st.warning("Veuillez vous connecter dans l'Espace Client sur la barre latérale gauche pour voir votre profil.")
     else:
@@ -243,11 +244,9 @@ elif st.session_state.page_actuelle == "MON PROFIL & PANIER":
 
 # 4. SUIVI COMMANDES
 elif st.session_state.page_actuelle == "📦 SUIVI DES COMMANDES":
-    if st.button("⬅️ Retour à l'Accueil", key="btn_ret_suivi"):
-        st.session_state.page_actuelle = "ACCUEIL"
-        st.rerun()
-        
+    st.button("⬅️ Retour à l'Accueil", key="btn_ret_suivi", on_click=changer_page, args=("ACCUEIL",))
     st.markdown("<h1 style='text-align: center; color: #d4af37;'>📦 SUIVI DE VOS CONFECTIONS</h1>", unsafe_allow_html=True)
+    
     nom_rech = st.session_state.client_connecte if st.session_state.client_connecte else st.text_input("Entrez votre Nom Complet pour le suivi :").strip().upper()
     
     if nom_rech:
@@ -261,10 +260,7 @@ elif st.session_state.page_actuelle == "📦 SUIVI DES COMMANDES":
 
 # 5. PARAMÈTRES (ADMIN)
 elif st.session_state.page_actuelle == "⚙️ PARAMÈTRES":
-    if st.button("⬅️ Retour à l'Accueil", key="btn_ret_admin"):
-        st.session_state.page_actuelle = "ACCUEIL"
-        st.rerun()
-        
+    st.button("⬅️ Retour à l'Accueil", key="btn_ret_admin", on_click=changer_page, args=("ACCUEIL",))
     st.markdown("<h1 style='color: #d4af37;'>WORKSHOP INTERFACE (PRO)</h1>", unsafe_allow_html=True)
     mdp = st.text_input("Code secret de l'atelier :", type="password")
     
@@ -274,7 +270,7 @@ elif st.session_state.page_actuelle == "⚙️ PARAMÈTRES":
         with tab1:
             with st.form("form_pub_modele"):
                 m_nom = st.text_input("Nom de la création :")
-                m_desc = st.text_area("Description :")
+                m_desc = m_desc = st.text_area("Description :")
                 m_prix = st.number_input("Prix (FCFA) :", min_value=0, step=5000)
                 m_file = st.file_uploader("Charger la photo depuis votre ordinateur :", type=["png", "jpg", "jpeg"])
                 
@@ -308,3 +304,31 @@ elif st.session_state.page_actuelle == "⚙️ PARAMÈTRES":
                             st.rerun()
             else:
                 st.info("Aucun modèle enregistré.")
+
+        with tab3:
+            st.write("### 👥 Commandes de l'atelier & Mesures")
+            commandes_dict = donnees.get("commandes", {})
+            if commandes_dict:
+                for id_cmd, cmd in list(commandes_dict.items()):
+                    with st.expander(f"📦 Commande {id_cmd} — Client : {cmd['client']}"):
+                        st.write(f"**Modèle commandé :** {cmd['modele']}")
+                        st.write(f"**Prix total :** {cmd['prix']} FCFA")
+                        
+                        # Affichage des mesures du client si elles existent
+                        client_m = donnees["clients"].get(cmd['client'], {})
+                        st.write(f"📞 **Téléphone client :** {client_m.get('telephone', 'Inconnu')}")
+                        st.write("**Mesures Haut :**", client_m.get("mesures_haut", "Aucune"))
+                        st.write("**Mesures Bas :**", client_m.get("mesures_bas", "Aucune"))
+                        
+                        # Modification du statut et de l'avance
+                        nv_avance = st.number_input(f"Avance reçue (FCFA) pour {id_cmd} :", value=int(cmd.get('avance', 0)), step=5000, key=f"av_{id_cmd}")
+                        nv_statut = st.selectbox(f"Statut confection :", ["En attente", "En coupe", "Au montage", "Finitions", "Prêt !"], index=["En attente", "En coupe", "Au montage", "Finitions", "Prêt !"].index(cmd.get('statut', 'En attente')), key=f"st_{id_cmd}")
+                        
+                        if st.button("💾 Enregistrer la commande", key=f"save_{id_cmd}"):
+                            donnees["commandes"][id_cmd]["avance"] = int(nv_avance)
+                            donnees["commandes"][id_cmd]["statut"] = nv_statut
+                            sauvegarder_donnees(donnees)
+                            st.success("Commande mise à jour !")
+                            st.rerun()
+            else:
+                st.info("Aucune commande en cours à l'atelier.")
