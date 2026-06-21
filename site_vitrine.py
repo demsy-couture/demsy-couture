@@ -66,10 +66,9 @@ st.sidebar.write("---")
 theme_choisi = st.sidebar.selectbox("🎨 Style visuel :", ["Sombre & Or", "Clair & Prestige"])
 st.sidebar.write("---")
 
-# Liste exacte des pages pour le menu radio
+# Liste des pages
 liste_pages = ["ACCUEIL", "COLLECTIONS (GALERIE)", "MON PROFIL & PANIER", "📦 SUIVI DES COMMANDES", "⚙️ PARAMÈTRES"]
 
-# On force l'index du menu radio par rapport à notre variable de session
 if st.session_state.page_actuelle in liste_pages:
     index_page = liste_pages.index(st.session_state.page_actuelle)
 else:
@@ -82,7 +81,7 @@ menu = st.sidebar.radio(
     key="nav_radio"
 )
 
-# Si l'utilisateur clique manuellement sur le menu radio de la sidebar
+# Synchronisation si clic sur la sidebar
 if menu != st.session_state.page_actuelle:
     st.session_state.page_actuelle = menu
     st.rerun()
@@ -113,12 +112,6 @@ st.markdown(f"""
     </style>
 """, unsafe_allow_html=True)
 
-# Fonction globale pour les boutons retour à l'accueil
-def afficher_bouton_retour():
-    if st.button("⬅️ Retour à l'Accueil", key="btn_global_retour"):
-        st.session_state.page_actuelle = "ACCUEIL"
-        st.rerun()
-
 # 1. ACCUEIL
 if st.session_state.page_actuelle == "ACCUEIL":
     titre_dynamique = config.get("titre_principal", "L'ÉLÉGANCE MASCULINE, REDÉFINIE.")
@@ -143,7 +136,10 @@ if st.session_state.page_actuelle == "ACCUEIL":
 
 # 2. GALERIE
 elif st.session_state.page_actuelle == "COLLECTIONS (GALERIE)":
-    afficher_bouton_retour()
+    if st.button("⬅️ Retour à l'Accueil", key="btn_ret_galerie"):
+        st.session_state.page_actuelle = "ACCUEIL"
+        st.rerun()
+        
     st.markdown("<h1 style='text-align: center; color: #d4af37;'>MODÈLES & CRÉATIONS</h1>", unsafe_allow_html=True)
     modeles = donnees.get("modeles", [])
     if modeles:
@@ -151,11 +147,11 @@ elif st.session_state.page_actuelle == "COLLECTIONS (GALERIE)":
         for idx, mod in enumerate(modeles):
             with cols[idx % 3]:
                 st.markdown("<div class='card-capsule'>", unsafe_allow_html=True)
-                if mod["image"].startswith("data:image") or mod["image"].startswith("http"):
+                if mod["image"].startswith("data:image") or mod["image"].startswith("http") or mod["image"].startswith("images/"):
                     st.image(mod["image"], use_container_width=True)
                 st.markdown(f"<h3 style='color:#d4af37;'>{mod['nom']}</h3>", unsafe_allow_html=True)
                 st.write(mod["description"])
-                st.markdown(f"<p style='color:#d4af37; font-weight:bold; font-size:18px;'>{int(mod['prix'])} FCFA</p>", unsafe_allow_html=True)
+                st.markdown(f"<p style='color:#d4af37; font-weight:bold; font-size:18px;'>{mod['prix']} FCFA</p>", unsafe_allow_html=True)
                 
                 if mod in st.session_state.panier:
                     if st.button(f"🗑️ Retirer", key=f"rm_{mod['id']}", use_container_width=True):
@@ -174,7 +170,10 @@ elif st.session_state.page_actuelle == "COLLECTIONS (GALERIE)":
 
 # 3. PROFIL & PANIER CLIENT
 elif st.session_state.page_actuelle == "MON PROFIL & PANIER":
-    afficher_bouton_retour()
+    if st.button("⬅️ Retour à l'Accueil", key="btn_ret_profil"):
+        st.session_state.page_actuelle = "ACCUEIL"
+        st.rerun()
+        
     if st.session_state.client_connecte is None:
         st.warning("Veuillez vous connecter dans l'Espace Client sur la barre latérale gauche pour voir votre profil.")
     else:
@@ -189,7 +188,6 @@ elif st.session_state.page_actuelle == "MON PROFIL & PANIER":
             with st.form("modif_mesures_client"):
                 nv_tel = st.text_input("Mettre à jour mon téléphone :", value=client_data.get("telephone", ""))
                 colh, colb = st.columns(2)
-                mesures_haut_maj, "%s"
                 mesures_haut_maj = {}
                 mesures_bas_maj = {}
                 champs_haut = ["Cou", "Poitrine", "Épaule", "Longueur Manche", "Tour de Bras"]
@@ -220,7 +218,7 @@ elif st.session_state.page_actuelle == "MON PROFIL & PANIER":
                     col_p1, col_p2, col_p3 = st.columns([3, 2, 1])
                     with col_p1: st.write(f"**{item['nom']}**")
                     with col_p2:
-                        st.write(f"{int(item['prix'])} FCFA")
+                        st.write(f"{item['prix']} FCFA")
                         total_panier += int(item['prix'])
                     with col_p3:
                         if st.button("Retirer", key=f"del_pan_{idx}"):
@@ -245,7 +243,10 @@ elif st.session_state.page_actuelle == "MON PROFIL & PANIER":
 
 # 4. SUIVI COMMANDES
 elif st.session_state.page_actuelle == "📦 SUIVI DES COMMANDES":
-    afficher_bouton_retour()
+    if st.button("⬅️ Retour à l'Accueil", key="btn_ret_suivi"):
+        st.session_state.page_actuelle = "ACCUEIL"
+        st.rerun()
+        
     st.markdown("<h1 style='text-align: center; color: #d4af37;'>📦 SUIVI DE VOS CONFECTIONS</h1>", unsafe_allow_html=True)
     nom_rech = st.session_state.client_connecte if st.session_state.client_connecte else st.text_input("Entrez votre Nom Complet pour le suivi :").strip().upper()
     
@@ -254,13 +255,16 @@ elif st.session_state.page_actuelle == "📦 SUIVI DES COMMANDES":
         cmds_client = {k: v for k, v in cmds.items() if v.get("client", "").upper() == nom_rech}
         if cmds_client:
             for id_cmd, cmd in cmds_client.items():
-                st.info(f"Commande {id_cmd} ({cmd['modele']}) : Statut = {cmd['statut']} | Reste à payer = {cmd['prix'] - cmd['avance']} FCFA")
+                st.info(f"Commande {id_cmd} ({cmd['modele']}) : Statut = {cmd['statut']} | Reste à payer = {int(cmd['prix']) - int(cmd['avance'])} FCFA")
         else:
             st.info("Aucune commande enregistrée pour ce nom.")
 
 # 5. PARAMÈTRES (ADMIN)
 elif st.session_state.page_actuelle == "⚙️ PARAMÈTRES":
-    afficher_bouton_retour()
+    if st.button("⬅️ Retour à l'Accueil", key="btn_ret_admin"):
+        st.session_state.page_actuelle = "ACCUEIL"
+        st.rerun()
+        
     st.markdown("<h1 style='color: #d4af37;'>WORKSHOP INTERFACE (PRO)</h1>", unsafe_allow_html=True)
     mdp = st.text_input("Code secret de l'atelier :", type="password")
     
@@ -302,3 +306,5 @@ elif st.session_state.page_actuelle == "⚙️ PARAMÈTRES":
                             sauvegarder_donnees(donnees)
                             st.success(f"{mod['nom']} supprimé !")
                             st.rerun()
+            else:
+                st.info("Aucun modèle enregistré.")
