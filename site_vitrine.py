@@ -63,6 +63,8 @@ if "client_connecte" not in st.session_state:
     st.session_state.client_connecte = None
 if "panier" not in st.session_state:
     st.session_state.panier = []
+if "admin_authentifie" not in st.session_state:
+    st.session_state.admin_authentifie = False
 
 # --- NAVIGATION SIDEBAR ---
 st.sidebar.markdown('<div style="color: #d4af37; font-size: 22px; font-weight: bold; text-align: center; margin-bottom: 5px; letter-spacing: 1px; font-family: \'Playfair Display\', serif;">DEMSY<br><span style="font-size:12px; color:#aaa;">COUTURE AU MASCULIN</span></div>', unsafe_allow_html=True)
@@ -262,15 +264,34 @@ elif st.session_state.page_actuelle == "📦 SUIVI DES COMMANDES":
 elif st.session_state.page_actuelle == "⚙️ PARAMÈTRES":
     st.button("⬅️ Retour à l'Accueil", key="btn_ret_admin", on_click=changer_page, args=("ACCUEIL",))
     st.markdown("<h1 style='color: #d4af37;'>WORKSHOP INTERFACE (PRO)</h1>", unsafe_allow_html=True)
-    mdp = st.text_input("Code secret de l'atelier :", type="password")
     
-    if mdp == MOT_DE_PASSE_ADMIN:
+    # --- FORMULAIRE DE CONNEXION SÉCURISÉ POUR L'ADMIN ---
+    if not st.session_state.admin_authentifie:
+        with st.form("login_admin_form"):
+            st.write("🔑 Entrez le code secret pour accéder à la gestion de l'atelier :")
+            mdp_saisi = st.text_input("Code secret :", type="password", key="admin_password_field")
+            bouton_valider = st.form_submit_button("🔓 Valider le mot de passe", use_container_width=True)
+            
+            if bouton_valider:
+                if mdp_saisi == MOT_DE_PASSE_ADMIN:
+                    st.session_state.admin_authentifie = True
+                    st.success("Accès autorisé !")
+                    st.rerun()
+                else:
+                    st.error("❌ Code secret incorrect.")
+                    
+    # --- INTERFACE DE GESTION (S'affiche uniquement si authentifié) ---
+    if st.session_state.admin_authentifie:
+        if st.button("🔒 Se déconnecter de l'Atelier", key="btn_logout_admin"):
+            st.session_state.admin_authentifie = False
+            st.rerun()
+            
         tab1, tab2, tab3 = st.tabs(["🧥 Ajouter un modèle", "🗑️ Gérer / Supprimer", "👥 Clients & Commandes"])
         
         with tab1:
             with st.form("form_pub_modele"):
                 m_nom = st.text_input("Nom de la création :")
-                m_desc = m_desc = st.text_area("Description :")
+                m_desc = st.text_area("Description :")
                 m_prix = st.number_input("Prix (FCFA) :", min_value=0, step=5000)
                 m_file = st.file_uploader("Charger la photo depuis votre ordinateur :", type=["png", "jpg", "jpeg"])
                 
