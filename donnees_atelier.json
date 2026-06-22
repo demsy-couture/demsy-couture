@@ -184,14 +184,6 @@
             "avance": 0,
             "statut": "En attente",
             "date_livraison": "À définir"
-        },
-        "CMD-105": {
-            "client": "KASHIF",
-            "modele": "CHEMISE",
-            "prix": 7000,
-            "avance": 0,
-            "statut": "En attente",
-            "date_livraison": "À définir"
         }
     }
 }
