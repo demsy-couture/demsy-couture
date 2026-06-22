@@ -398,12 +398,16 @@ elif st.session_state.page_actuelle == "⚙️ PARAMÈTRES":
             st.write("### 📦 Gestion du suivi des commandes reçues")
             commandes_dict = donnees.get("commandes", {})
             if commandes_dict:
-                for id_cmd, cmd in list(commandes_dict.items()):
+                # Créer une liste figée des clés pour éviter tout bug lors de la suppression
+                liste_cles_commandes = list(commandes_dict.keys())
+                for id_cmd in liste_cles_commandes:
+                    if id_cmd not in donnees["commandes"]: continue
+                    cmd = donnees["commandes"][id_cmd]
+                    
                     with st.expander(f"⚙️ Commande {id_cmd} — {cmd['client']}"):
-                        
                         st.markdown(f"**Modèle commandé :** {cmd.get('modele')} | **Prix total :** {cmd.get('prix')} FCFA")
                         
-                        # Recherche robuste insensible aux majuscules/espaces pour afficher la photo
+                        # Recherche robuste et affichage de la photo
                         modeles_liste = donnees.get("modeles", [])
                         image_trouvee = next((m["image"] for m in modeles_liste if m["nom"].strip().lower() == cmd.get("modele", "").strip().lower()), None)
                         
@@ -414,12 +418,20 @@ elif st.session_state.page_actuelle == "⚙️ PARAMÈTRES":
                         nv_statut = st.selectbox(f"Statut actuel :", ["En attente", "En coupe", "Au montage", "Finitions", "Prêt !"], index=["En attente", "En coupe", "Au montage", "Finitions", "Prêt !"].index(cmd.get('statut', 'En attente')), key=f"st_{id_cmd}")
                         nv_date = st.text_input(f"Date de livraison prévue :", value=cmd.get('date_livraison', 'À définir'), key=f"dt_{id_cmd}")
                         
-                        if st.button("💾 Mettre à jour la commande", key=f"save_{id_cmd}"):
-                            donnees["commandes"][id_cmd]["avance"] = int(nv_avance)
-                            donnees["commandes"][id_cmd]["statut"] = nv_statut
-                            donnees["commandes"][id_cmd]["date_livraison"] = nv_date
-                            sauvegarder_donnees(donnees)
-                            st.success("Commande mise à jour !")
-                            st.rerun()
+                        btn_col1, btn_col2 = st.columns(2)
+                        with btn_col1:
+                            if st.button("💾 Mettre à jour la commande", key=f"save_{id_cmd}", use_container_width=True):
+                                donnees["commandes"][id_cmd]["avance"] = int(nv_avance)
+                                donnees["commandes"][id_cmd]["statut"] = nv_statut
+                                donnees["commandes"][id_cmd]["date_livraison"] = nv_date
+                                sauvegarder_donnees(donnees)
+                                st.success("Commande mise à jour !")
+                                st.rerun()
+                        with btn_col2:
+                            if st.button("❌ Supprimer définitivement la commande", key=f"del_cmd_{id_cmd}", use_container_width=True):
+                                del donnees["commandes"][id_cmd]
+                                sauvegarder_donnees(donnees)
+                                st.success("Commande supprimée avec succès !")
+                                st.rerun()
             else:
                 st.info("Aucune commande n'a encore été passée par les clients.")
