@@ -160,7 +160,7 @@ st.markdown(f"""
 # 1. ACCUEIL
 if st.session_state.page_actuelle == "ACCUEIL":
     titre_dynamique = config.get("titre_principal", "L'ÉLÉGANCE MASCULINE, REDÉFINIE.")
-    st.markdown(f'<div class="hero-container"><div class="hero-title">{titre_dynamique}</div><div class="hero-subtitle">DEMSY COUTURE AU MASCULIN</div></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="hero-container"><div class="hero-title">{titre_dynamique}</div><div class="hero-subtitle">DEMSY COUTURE AU MASCULIN 05 46 13 77 01</div></div>', unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns(3)
     with col1:
