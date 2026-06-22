@@ -26,7 +26,6 @@ TOKEN_GH = st.secrets.get("GITHUB_TOKEN", "")
 def charger_donnees():
     structure_vide = {"configuration": {}, "modeles": [], "clients": {}, "commandes": {}}
     
-    # Tentative de lecture en direct depuis GitHub pour avoir toujours le fichier à jour
     if TOKEN_GH:
         url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{FICHIER_DONNEES}"
         headers = {"Authorization": f"token {TOKEN_GH}"}
@@ -43,7 +42,6 @@ def charger_donnees():
             except:
                 pass
 
-    # Secours local si GitHub indisponible
     if os.path.exists(FICHIER_DONNEES):
         with open(FICHIER_DONNEES, "r", encoding="utf-8") as f:
             try:
@@ -59,16 +57,13 @@ def charger_donnees():
     return structure_vide
 
 def sauvegarder_donnees(donnees):
-    # 1. Sauvegarde locale temporaire
     with open(FICHIER_DONNEES, "w", encoding="utf-8") as f:
         json.dump(donnees, f, indent=4, ensure_ascii=False)
         
-    # 2. Envoi automatique et instantané vers ton GitHub
     if TOKEN_GH:
         url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{FICHIER_DONNEES}"
         headers = {"Authorization": f"token {TOKEN_GH}"}
         
-        # Récupération du sha du fichier actuel pour pouvoir le modifier
         res_get = requests.get(url, headers=headers)
         sha = res_get.json().get("sha", "") if res_get.status_code == 200 else ""
         
@@ -89,7 +84,6 @@ config = donnees.get("configuration", {})
 MOT_DE_PASSE_ADMIN = "16129489f"
 liste_pages = ["ACCUEIL", "COLLECTIONS (GALERIE)", "MON PROFIL & PANIER", "📦 SUIVI DES COMMANDES", "⚙️ PARAMÈTRES"]
 
-# --- FONCTIONS DE NAVIGATION ---
 def changer_page(nouvelle_page):
     st.session_state.page_actuelle = nouvelle_page
     st.session_state.nav_radio = nouvelle_page
@@ -291,7 +285,7 @@ elif st.session_state.page_actuelle == "MON PROFIL & PANIER":
             else:
                 st.info("Votre panier est vide. Parcourez la Galerie pour ajouter des tenues.")
 
-# 4. SUIVI COMMANDES
+# 4. SUIVI COMMANDES PUBLIC
 elif st.session_state.page_actuelle == "📦 SUIVI DES COMMANDES":
     st.button("⬅️ Retour à l'Accueil", key="btn_ret_suivi", on_click=changer_page, args=("ACCUEIL",))
     st.markdown("<h1 style='text-align: center; color: #d4af37;'>📦 SUIVI DE VOS CONFECTIONS</h1>", unsafe_allow_html=True)
@@ -301,7 +295,7 @@ elif st.session_state.page_actuelle == "📦 SUIVI DES COMMANDES":
         cmds_client = {k: v for k, v in cmds.items() if v.get("client", "").upper() == nom_rech}
         if cmds_client:
             for id_cmd, cmd in cmds_client.items():
-                st.info(f"Commande {id_cmd} ({cmd['modele']}) : Statut = {cmd['statut']} | Reste à payer = {int(cmd['prix']) - int(cmd['avance'])} FCFA")
+                st.info(f"Commande {id_cmd} ({cmd['modele']}) : Statut = {cmd['statut']} | Date de livraison prévue = {cmd.get('date_livraison', 'À définir')} | Reste à payer = {int(cmd['prix']) - int(cmd['avance'])} FCFA")
         else: st.info("Aucune commande enregistrée pour ce nom.")
 
 # 5. PARAMÈTRES (ADMIN)
@@ -403,11 +397,16 @@ elif st.session_state.page_actuelle == "⚙️ PARAMÈTRES":
                         st.write(f"**Modèle commandé :** {cmd.get('modele')} | **Prix total :** {cmd.get('prix')} FCFA")
                         nv_avance = st.number_input(f"Avance reçue (FCFA) :", value=int(cmd.get('avance', 0)), key=f"av_{id_cmd}")
                         nv_statut = st.selectbox(f"Statut actuel :", ["En attente", "En coupe", "Au montage", "Finitions", "Prêt !"], index=["En attente", "En coupe", "Au montage", "Finitions", "Prêt !"].index(cmd.get('statut', 'En attente')), key=f"st_{id_cmd}")
+                        
+                        # AJOUT DU CHAMP MANQUANT : Date de livraison !
+                        nv_date = st.text_input(f"Date de livraison prévue :", value=cmd.get('date_livraison', 'À définir'), key=f"dt_{id_cmd}")
+                        
                         if st.button("💾 Mettre à jour la commande", key=f"save_{id_cmd}"):
                             donnees["commandes"][id_cmd]["avance"] = int(nv_avance)
                             donnees["commandes"][id_cmd]["statut"] = nv_statut
+                            donnees["commandes"][id_cmd]["date_livraison"] = nv_date
                             sauvegarder_donnees(donnees)
-                            st.success("Commande mise à jour !")
+                            st.success("Commande mise à jour avec la date de livraison !")
                             st.rerun()
             else:
                 st.info("Aucune commande n'a encore été passée par les clients.")
