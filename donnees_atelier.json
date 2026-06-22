@@ -185,14 +185,6 @@
             "statut": "En attente",
             "date_livraison": "À définir"
         },
-        "CMD-104": {
-            "client": "KASHIF",
-            "modele": "COSTUME",
-            "prix": 40000,
-            "avance": 0,
-            "statut": "En attente",
-            "date_livraison": "À définir"
-        },
         "CMD-105": {
             "client": "KASHIF",
             "modele": "CHEMISE",
