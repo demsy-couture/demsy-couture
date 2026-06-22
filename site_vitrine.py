@@ -16,6 +16,10 @@ st.set_page_config(
 GITHUB_REPO = "demsy-couture/demsy-couture"
 FICHIER_DONNEES = "donnees_atelier.json"
 
+# Listes globales des mesures (accessibles sur toutes les pages)
+champs_haut = ["Épaule", "Longueur de Manche", "Tour de Manche", "Poitrine", "Ventre", "Longueur Haut", "Col", "Dos"]
+champs_bas = ["Ceinture", "Bassin", "Cuisse", "Longueur Bas", "Mollet", "Bas", "Frappe"]
+
 # Récupération sécurisée de la clé depuis les Secrets de Streamlit
 TOKEN_GH = st.secrets.get("GITHUB_TOKEN", "")
 
@@ -228,8 +232,6 @@ elif st.session_state.page_actuelle == "MON PROFIL & PANIER":
                 
                 colh, colb = st.columns(2)
                 mesures_haut_maj, mesures_bas_maj = {}, {}
-                champs_haut = ["Épaule", "Longueur de Manche", "Tour de Manche", "Poitrine", "Ventre", "Longueur Haut", "Col", "Dos"]
-                champs_bas = ["Ceinture", "Bassin", "Cuisse", "Longueur Bas", "Mollet", "Bas", "Frappe"]
                 
                 with colh:
                     st.markdown("##### 📏 Haut du corps (en cm)")
