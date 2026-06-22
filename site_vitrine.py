@@ -207,6 +207,8 @@ elif st.session_state.page_actuelle == "COLLECTIONS (GALERIE)":
                             st.session_state.panier.append(mod)
                             st.rerun()
                 st.markdown("</div>", unsafe_allow_html=True)
+    else:
+        st.info("🧥 Aucun modèle n'est exposé dans la galerie pour l'instant. Connectez-vous en tant qu'administrateur dans l'onglet PARAMÈTRES pour ajouter vos premières créations !")
 
 # 3. PROFIL & PANIER CLIENT
 elif st.session_state.page_actuelle == "MON PROFIL & PANIER":
@@ -286,6 +288,8 @@ elif st.session_state.page_actuelle == "MON PROFIL & PANIER":
                     st.session_state.panier = []
                     st.success("🎉 Commande envoyée !")
                     st.rerun()
+            else:
+                st.info("Votre panier est vide. Parcourez la Galerie pour ajouter des tenues.")
 
 # 4. SUIVI COMMANDES
 elif st.session_state.page_actuelle == "📦 SUIVI DES COMMANDES":
@@ -334,10 +338,11 @@ elif st.session_state.page_actuelle == "⚙️ PARAMÈTRES":
                         ext = m_file.name.split(".")[-1]
                         donnees["modeles"].append({"id": f"mod_{len(donnees['modeles'])+1}", "nom": m_nom, "description": m_desc, "prix": int(m_prix), "image": f"data:image/{ext};base64,{b64_img}"})
                         sauvegarder_donnees(donnees)
-                        st.success("Publié !")
+                        st.success("Publié avec succès !")
                         st.rerun()
 
         with tab2:
+            st.write("### 🗑️ Gestion des modèles exposés")
             modeles = donnees.get("modeles", [])
             if modeles:
                 for idx, mod in enumerate(modeles):
@@ -348,6 +353,8 @@ elif st.session_state.page_actuelle == "⚙️ PARAMÈTRES":
                             modeles.pop(idx)
                             sauvegarder_donnees(donnees)
                             st.rerun()
+            else:
+                st.info("Aucun modèle n'est enregistré dans la vitrine. Utilisez le premier onglet pour en ajouter.")
 
         with tab3:
             st.write("### 👥 Annuaire et Base de données Clients")
@@ -382,18 +389,25 @@ elif st.session_state.page_actuelle == "⚙️ PARAMÈTRES":
                             if st.form_submit_button("💾 Sauvegarder pour ce client"):
                                 donnees["clients"][nom_client] = {"telephone": nv_tel_admin, "mesures_haut": mesures_haut_admin, "mesures_bas": mesures_bas_admin, "photo_profil": photo_p}
                                 sauvegarder_donnees(donnees)
-                                st.success("Mis à jour sur GitHub !")
+                                st.success("Mis à jour avec succès sur GitHub !")
                                 st.rerun()
+            else:
+                st.info("Aucun client enregistré pour le moment.")
 
         with tab4:
+            st.write("### 📦 Gestion du suivi des commandes reçues")
             commandes_dict = donnees.get("commandes", {})
             if commandes_dict:
                 for id_cmd, cmd in list(commandes_dict.items()):
                     with st.expander(f"⚙️ Commande {id_cmd} — {cmd['client']}"):
-                        nv_avance = st.number_input(f"Avance reçu :", value=int(cmd.get('avance', 0)), key=f"av_{id_cmd}")
-                        nv_statut = st.selectbox(f"Statut :", ["En attente", "En coupe", "Au montage", "Finitions", "Prêt !"], index=["En attente", "En coupe", "Au montage", "Finitions", "Prêt !"].index(cmd.get('statut', 'En attente')), key=f"st_{id_cmd}")
-                        if st.button("💾 Mettre à jour", key=f"save_{id_cmd}"):
+                        st.write(f"**Modèle commandé :** {cmd.get('modele')} | **Prix total :** {cmd.get('prix')} FCFA")
+                        nv_avance = st.number_input(f"Avance reçue (FCFA) :", value=int(cmd.get('avance', 0)), key=f"av_{id_cmd}")
+                        nv_statut = st.selectbox(f"Statut actuel :", ["En attente", "En coupe", "Au montage", "Finitions", "Prêt !"], index=["En attente", "En coupe", "Au montage", "Finitions", "Prêt !"].index(cmd.get('statut', 'En attente')), key=f"st_{id_cmd}")
+                        if st.button("💾 Mettre à jour la commande", key=f"save_{id_cmd}"):
                             donnees["commandes"][id_cmd]["avance"] = int(nv_avance)
                             donnees["commandes"][id_cmd]["statut"] = nv_statut
                             sauvegarder_donnees(donnees)
+                            st.success("Commande mise à jour !")
                             st.rerun()
+            else:
+                st.info("Aucune commande n'a encore été passée par les clients.")
