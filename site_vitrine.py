@@ -327,7 +327,7 @@ elif st.session_state.page_actuelle == "⚙️ PARAMÈTRES":
             else:
                 st.info("Aucun modèle enregistré.")
 
-        with tab3:
+       with tab3:
             st.write("### 👥 Annuaire et Base de données Clients")
             
             # FILTRE DE RECHERCHE
@@ -335,6 +335,7 @@ elif st.session_state.page_actuelle == "⚙️ PARAMÈTRES":
             
             clients_dict = donnees.get("clients", {})
             commandes_dict = donnees.get("commandes", {})
+            modeles_liste = donnees.get("modeles", [])
             
             if not clients_dict:
                 st.info("Aucun client n'est encore enregistré dans la base.")
@@ -368,17 +369,39 @@ elif st.session_state.page_actuelle == "⚙️ PARAMÈTRES":
                             st.markdown("**📐 Bas du corps :**")
                             mesures_bas = infos.get("mesures_bas", {})
                             if mesures_bas:
-                                for k, v in mesures_bas.items():
+                                Government IDs for k, v in mesures_bas.items():
                                     if v > 0: st.write(f"- {k} : {v} cm")
                             else:
                                 st.write("Aucune mesure")
                         
-                        # Affichage des commandes spécifiques à ce client
+                        # Affichage des commandes spécifiques à ce client avec PHOTO, NOM et PRIX
                         if cmds_client:
                             st.markdown("---")
-                            st.markdown("#### 📦 État des commandes de ce client :")
+                            st.markdown("#### 📦 Détails de la commande :")
                             for id_cmd, cmd in cmds_client.items():
-                                st.info(f"**N° {id_cmd}** ({cmd['modele']}) | Statut actuel : **{cmd['statut']}**")
+                                nom_modele_commande = cmd['modele']
+                                
+                                # Recherche de la photo correspondante dans les modèles existants
+                                photo_modele = None
+                                for mod in modeles_liste:
+                                    if mod["nom"] == nom_modele_commande:
+                                        photo_modele = mod["image"]
+                                        break
+                                
+                                # Organisation de l'affichage de la commande
+                                col_txt, col_img = st.columns([3, 1])
+                                with col_txt:
+                                    st.info(f"""
+                                    **N° Commande :** {id_cmd}  
+                                    **Nom du modèle :** {nom_modele_commande}  
+                                    **Prix :** {cmd['prix']} FCFA  
+                                    **Statut actuel :** {cmd['statut']}
+                                    """)
+                                with col_img:
+                                    if photo_modele:
+                                        st.image(photo_modele, caption="Modèle choisi", use_container_width=True)
+                                    else:
+                                        st.caption("📷 (Pas de photo disponible)")
 
         with tab4:
             st.write("### 📦 Mettre à jour l'évolution des commandes")
