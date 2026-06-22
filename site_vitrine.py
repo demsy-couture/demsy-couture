@@ -296,6 +296,12 @@ elif st.session_state.page_actuelle == "📦 SUIVI DES COMMANDES":
         if cmds_client:
             for id_cmd, cmd in cmds_client.items():
                 st.info(f"Commande {id_cmd} ({cmd['modele']}) : Statut = {cmd['statut']} | Date de livraison prévue = {cmd.get('date_livraison', 'À définir')} | Reste à payer = {int(cmd['prix']) - int(cmd['avance'])} FCFA")
+                
+                modeles_liste = donnees.get("modeles", [])
+                image_trouvee = next((m["image"] for m in modeles_liste if m["nom"].strip().lower() == cmd.get("modele", "").strip().lower()), None)
+                if image_trouvee:
+                    st.image(image_trouvee, width=150)
+                st.markdown("---")
         else: st.info("Aucune commande enregistrée pour ce nom.")
 
 # 5. PARAMÈTRES (ADMIN)
@@ -394,11 +400,18 @@ elif st.session_state.page_actuelle == "⚙️ PARAMÈTRES":
             if commandes_dict:
                 for id_cmd, cmd in list(commandes_dict.items()):
                     with st.expander(f"⚙️ Commande {id_cmd} — {cmd['client']}"):
-                        st.write(f"**Modèle commandé :** {cmd.get('modele')} | **Prix total :** {cmd.get('prix')} FCFA")
+                        
+                        st.markdown(f"**Modèle commandé :** {cmd.get('modele')} | **Prix total :** {cmd.get('prix')} FCFA")
+                        
+                        # Recherche robuste insensible aux majuscules/espaces pour afficher la photo
+                        modeles_liste = donnees.get("modeles", [])
+                        image_trouvee = next((m["image"] for m in modeles_liste if m["nom"].strip().lower() == cmd.get("modele", "").strip().lower()), None)
+                        
+                        if image_trouvee:
+                            st.image(image_trouvee, width=200)
+                        
                         nv_avance = st.number_input(f"Avance reçue (FCFA) :", value=int(cmd.get('avance', 0)), key=f"av_{id_cmd}")
                         nv_statut = st.selectbox(f"Statut actuel :", ["En attente", "En coupe", "Au montage", "Finitions", "Prêt !"], index=["En attente", "En coupe", "Au montage", "Finitions", "Prêt !"].index(cmd.get('statut', 'En attente')), key=f"st_{id_cmd}")
-                        
-                        # AJOUT DU CHAMP MANQUANT : Date de livraison !
                         nv_date = st.text_input(f"Date de livraison prévue :", value=cmd.get('date_livraison', 'À définir'), key=f"dt_{id_cmd}")
                         
                         if st.button("💾 Mettre à jour la commande", key=f"save_{id_cmd}"):
@@ -406,7 +419,7 @@ elif st.session_state.page_actuelle == "⚙️ PARAMÈTRES":
                             donnees["commandes"][id_cmd]["statut"] = nv_statut
                             donnees["commandes"][id_cmd]["date_livraison"] = nv_date
                             sauvegarder_donnees(donnees)
-                            st.success("Commande mise à jour avec la date de livraison !")
+                            st.success("Commande mise à jour !")
                             st.rerun()
             else:
                 st.info("Aucune commande n'a encore été passée par les clients.")
