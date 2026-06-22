@@ -2,6 +2,7 @@ import streamlit as st
 import json
 import os
 import base64
+import requests
 
 # Configuration de la page
 st.set_page_config(
@@ -11,37 +12,80 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# Configuration GitHub automatique
+GITHUB_REPO = "demsy-couture/demsy-couture"
 FICHIER_DONNEES = "donnees_atelier.json"
-MOT_DE_PASSE_ADMIN = "16129489f"
+
+# Récupération sécurisée de la clé depuis les Secrets de Streamlit
+TOKEN_GH = st.secrets.get("GITHUB_TOKEN", "")
 
 def charger_donnees():
     structure_vide = {"configuration": {}, "modeles": [], "clients": {}, "commandes": {}}
+    
+    # Tentative de lecture en direct depuis GitHub pour avoir toujours le fichier à jour
+    if TOKEN_GH:
+        url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{FICHIER_DONNEES}"
+        headers = {"Authorization": f"token {TOKEN_GH}"}
+        res = requests.get(url, headers=headers)
+        if res.status_code == 200:
+            try:
+                contenu_b64 = res.json()["content"]
+                contenu_json = base64.b64decode(contenu_b64).decode("utf-8")
+                donnees_chargees = json.loads(contenu_json)
+                for cle in structure_vide:
+                    if cle not in donnees_chargees:
+                        donnees_chargees[cle] = structure_vide[cle]
+                return donnees_chargees
+            except:
+                pass
+
+    # Secours local si GitHub indisponible
     if os.path.exists(FICHIER_DONNEES):
         with open(FICHIER_DONNEES, "r", encoding="utf-8") as f:
             try:
                 contenu = f.read().strip()
                 if contenu:
                     donnees_chargees = json.loads(contenu)
-                    # Sécurité : s'assurer que toutes les clés de base existent
                     for cle in structure_vide:
                         if cle not in donnees_chargees:
                             donnees_chargees[cle] = structure_vide[cle]
                     return donnees_chargees
             except Exception as e:
-                st.error(f"Erreur de lecture de la base de données : {e}")
+                st.error(f"Erreur de lecture : {e}")
     return structure_vide
 
 def sauvegarder_donnees(donnees):
+    # 1. Sauvegarde locale temporaire
     with open(FICHIER_DONNEES, "w", encoding="utf-8") as f:
         json.dump(donnees, f, indent=4, ensure_ascii=False)
+        
+    # 2. Envoi automatique et instantané vers ton GitHub
+    if TOKEN_GH:
+        url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{FICHIER_DONNEES}"
+        headers = {"Authorization": f"token {TOKEN_GH}"}
+        
+        # Récupération du sha du fichier actuel pour pouvoir le modifier
+        res_get = requests.get(url, headers=headers)
+        sha = res_get.json().get("sha", "") if res_get.status_code == 200 else ""
+        
+        nouveau_contenu = json.dumps(donnees, indent=4, ensure_ascii=False)
+        contenu_b64 = base64.b64encode(nouveau_contenu.encode("utf-8")).decode("utf-8")
+        
+        payload = {
+            "message": "Mise à jour automatique de la base client (Demsy App)",
+            "content": contenu_b64,
+            "sha": sha
+        }
+        
+        requests.put(url, headers=headers, json=payload)
 
 donnees = charger_donnees()
 config = donnees.get("configuration", {})
 
-# Liste officielle des pages
+MOT_DE_PASSE_ADMIN = "16129489f"
 liste_pages = ["ACCUEIL", "COLLECTIONS (GALERIE)", "MON PROFIL & PANIER", "📦 SUIVI DES COMMANDES", "⚙️ PARAMÈTRES"]
 
-# --- FONCTIONS DE NAVIGATION (CALLBACKS) ---
+# --- FONCTIONS DE NAVIGATION ---
 def changer_page(nouvelle_page):
     st.session_state.page_actuelle = nouvelle_page
     st.session_state.nav_radio = nouvelle_page
@@ -51,12 +95,7 @@ def connexion_client(nom, tel):
     if nom_clean:
         st.session_state.client_connecte = nom_clean
         if nom_clean not in donnees["clients"]:
-            donnees["clients"][nom_clean] = {
-                "telephone": tel, 
-                "mesures_haut": {}, 
-                "mesures_bas": {}, 
-                "photo_profil": ""
-            }
+            donnees["clients"][nom_clean] = {"telephone": tel, "mesures_haut": {}, "mesures_bas": {}, "photo_profil": ""}
             sauvegarder_donnees(donnees)
         st.session_state.page_actuelle = "ACCUEIL"
         st.session_state.nav_radio = "ACCUEIL"
@@ -67,24 +106,17 @@ def deconnexion_client():
     st.session_state.page_actuelle = "ACCUEIL"
     st.session_state.nav_radio = "ACCUEIL"
 
-# --- INITIALISATION DES SESSIONS ---
-if "page_actuelle" not in st.session_state:
-    st.session_state.page_actuelle = "ACCUEIL"
-if "client_connecte" not in st.session_state:
-    st.session_state.client_connecte = None
-if "panier" not in st.session_state:
-    st.session_state.panier = []
-if "admin_authentifie" not in st.session_state:
-    st.session_state.admin_authentifie = False
+if "page_actuelle" not in st.session_state: st.session_state.page_actuelle = "ACCUEIL"
+if "client_connecte" not in st.session_state: st.session_state.client_connecte = None
+if "panier" not in st.session_state: st.session_state.panier = []
+if "admin_authentifie" not in st.session_state: st.session_state.admin_authentifie = False
 
-# Affichage du logo officiel en haut de la barre latérale
 if os.path.exists("logo.jpg"):
     st.sidebar.image("logo.jpg", use_container_width=True)
 else:
     st.sidebar.markdown('<div style="color: #d4af37; font-size: 22px; font-weight: bold; text-align: center; margin-bottom: 5px; letter-spacing: 1px; font-family: \'Playfair Display\', serif;">DEMSY<br><span style="font-size:12px; color:#aaa;">COUTURE AU MASCULIN</span></div>', unsafe_allow_html=True)
 
 st.sidebar.write("---")
-
 st.sidebar.write("### 🔑 Espace Client")
 if st.session_state.client_connecte is None:
     nom_saisi = st.sidebar.text_input("Votre Nom Complet :", value="", key="connexion_nom")
@@ -98,22 +130,10 @@ st.sidebar.write("---")
 theme_choisi = st.sidebar.selectbox("🎨 Style visuel :", ["Sombre & Or", "Clair & Prestige"])
 st.sidebar.write("---")
 
-if st.session_state.page_actuelle in liste_pages:
-    index_page = liste_pages.index(st.session_state.page_actuelle)
-else:
-    index_page = 0
+index_page = liste_pages.index(st.session_state.page_actuelle) if st.session_state.page_actuelle in liste_pages else 0
+menu = st.sidebar.radio("Navigation :", liste_pages, index=index_page, key="nav_radio")
+if menu != st.session_state.page_actuelle: st.session_state.page_actuelle = menu
 
-menu = st.sidebar.radio(
-    "Navigation :", 
-    liste_pages, 
-    index=index_page,
-    key="nav_radio"
-)
-
-if menu != st.session_state.page_actuelle:
-    st.session_state.page_actuelle = menu
-
-# --- THEMATISATION DES COULEURS ---
 if theme_choisi == "Sombre & Or":
     bg_app, text_main, bg_sidebar = "#0d0d0d", "#ffffff", "#1a1a1a"
     card_bg, card_border = "linear-gradient(135deg, #1a1a1a 0%, #111111 100%)", "#333333"
@@ -178,14 +198,11 @@ elif st.session_state.page_actuelle == "COLLECTIONS (GALERIE)":
                         st.rerun()
                 else:
                     if st.button(f"🛒 Ajouter au panier", key=f"add_{mod['id']}", use_container_width=True):
-                        if st.session_state.client_connecte is None:
-                            st.warning("Connectez-vous à gauche d'abord !")
+                        if st.session_state.client_connecte is None: st.warning("Connectez-vous à gauche d'abord !")
                         else:
                             st.session_state.panier.append(mod)
                             st.rerun()
                 st.markdown("</div>", unsafe_allow_html=True)
-    else:
-        st.info("Aucun modèle dans la vitrine.")
 
 # 3. PROFIL & PANIER CLIENT
 elif st.session_state.page_actuelle == "MON PROFIL & PANIER":
@@ -202,23 +219,15 @@ elif st.session_state.page_actuelle == "MON PROFIL & PANIER":
             client_data = donnees["clients"].get(nom_c, {"telephone": "", "mesures_haut": {}, "mesures_bas": {}, "photo_profil": ""})
             st.write(f"**Téléphone enregistré :** {client_data.get('telephone', 'Non renseigné')}")
             
-            # Affichage de la photo de profil du client si elle existe
             photo_actuelle = client_data.get("photo_profil", "")
-            if photo_actuelle:
-                st.image(photo_actuelle, caption="Votre photo de profil", width=150)
+            if photo_actuelle: st.image(photo_actuelle, caption="Votre photo de profil", width=150)
             
-            # Formulaire unique pour s'inscrire / mettre à jour ses données
             with st.form("modif_mesures_client"):
                 nv_tel = st.text_input("Mettre à jour mon téléphone :", value=client_data.get("telephone", ""))
-                
-                st.markdown("##### 📷 Ma Photo de Profil")
                 fichier_photo = st.file_uploader("Choisissez une photo de vous (JPG ou PNG) :", type=["png", "jpg", "jpeg"])
                 
                 colh, colb = st.columns(2)
-                mesures_haut_maj = {}
-                mesures_bas_maj = {}
-                
-                # Liste complète de tes champs de mesures (comme sur ta capture d'écran)
+                mesures_haut_maj, mesures_bas_maj = {}, {}
                 champs_haut = ["Épaule", "Longueur de Manche", "Tour de Manche", "Poitrine", "Ventre", "Longueur Haut", "Col", "Dos"]
                 champs_bas = ["Ceinture", "Bassin", "Cuisse", "Longueur Bas", "Mollet", "Bas", "Frappe"]
                 
@@ -234,22 +243,17 @@ elif st.session_state.page_actuelle == "MON PROFIL & PANIER":
                         mesures_bas_maj[m] = st.number_input(f"{m} :", value=float(val_m), step=0.5, key=f"cl_b_{m}")
                 
                 if st.form_submit_button("Enregistrer mes modifications"):
-                    # Traitement automatique de la photo pour l'intégrer au fichier JSON de façon sécurisée
                     if fichier_photo:
                         bytes_data = fichier_photo.getvalue()
                         b64_img = base64.b64encode(bytes_data).decode("utf-8")
                         ext = fichier_photo.name.split(".")[-1]
                         photo_actuelle = f"data:image/{ext};base64,{b64_img}"
                     
-                    # Mise à jour et sauvegarde automatique dans donnees_atelier.json
                     donnees["clients"][nom_c] = {
-                        "telephone": nv_tel, 
-                        "mesures_haut": mesures_haut_maj, 
-                        "mesures_bas": mesures_bas_maj,
-                        "photo_profil": photo_actuelle
+                        "telephone": nv_tel, "mesures_haut": mesures_haut_maj, "mesures_bas": mesures_bas_maj, "photo_profil": photo_actuelle
                     }
                     sauvegarder_donnees(donnees)
-                    st.success("Profil, photo et mesures enregistrés !")
+                    st.success("Profil enregistré et synchronisé avec GitHub !")
                     st.rerun()
             
         with tab_panier:
@@ -280,24 +284,19 @@ elif st.session_state.page_actuelle == "MON PROFIL & PANIER":
                     st.session_state.panier = []
                     st.success("🎉 Commande envoyée !")
                     st.rerun()
-            else:
-                st.info("Votre panier est vide.")
 
 # 4. SUIVI COMMANDES
 elif st.session_state.page_actuelle == "📦 SUIVI DES COMMANDES":
     st.button("⬅️ Retour à l'Accueil", key="btn_ret_suivi", on_click=changer_page, args=("ACCUEIL",))
     st.markdown("<h1 style='text-align: center; color: #d4af37;'>📦 SUIVI DE VOS CONFECTIONS</h1>", unsafe_allow_html=True)
-    
     nom_rech = st.session_state.client_connecte if st.session_state.client_connecte else st.text_input("Entrez votre Nom Complet pour le suivi :").strip().upper()
-    
     if nom_rech:
         cmds = donnees.get("commandes", {})
         cmds_client = {k: v for k, v in cmds.items() if v.get("client", "").upper() == nom_rech}
         if cmds_client:
             for id_cmd, cmd in cmds_client.items():
                 st.info(f"Commande {id_cmd} ({cmd['modele']}) : Statut = {cmd['statut']} | Reste à payer = {int(cmd['prix']) - int(cmd['avance'])} FCFA")
-        else:
-            st.info("Aucune commande enregistrée pour ce nom.")
+        else: st.info("Aucune commande enregistrée pour ce nom.")
 
 # 5. PARAMÈTRES (ADMIN)
 elif st.session_state.page_actuelle == "⚙️ PARAMÈTRES":
@@ -306,20 +305,15 @@ elif st.session_state.page_actuelle == "⚙️ PARAMÈTRES":
     
     if not st.session_state.admin_authentifie:
         with st.form("login_admin_form"):
-            st.write("🔑 Entrez le code secret pour accéder à la gestion de l'atelier :")
-            mdp_saisi = st.text_input("Code secret :", type="password", key="admin_password_field")
-            bouton_valider = st.form_submit_button("🔓 Valider le mot de passe", use_container_width=True)
-            
-            if bouton_valider:
+            mdp_saisi = st.text_input("Code secret :", type="password")
+            if st.form_submit_button("🔓 Valider"):
                 if mdp_saisi == MOT_DE_PASSE_ADMIN:
                     st.session_state.admin_authentifie = True
-                    st.success("Accès autorisé !")
                     st.rerun()
-                else:
-                    st.error("❌ Code secret incorrect.")
+                else: st.error("❌ Code secret incorrect.")
                     
     if st.session_state.admin_authentifie:
-        if st.button("🔒 Se déconnecter de l'Atelier", key="btn_logout_admin"):
+        if st.button("🔒 Se déconnecter de l'Atelier"):
             st.session_state.admin_authentifie = False
             st.rerun()
             
@@ -330,25 +324,18 @@ elif st.session_state.page_actuelle == "⚙️ PARAMÈTRES":
                 m_nom = st.text_input("Nom de la création :")
                 m_desc = st.text_area("Description :")
                 m_prix = st.number_input("Prix (FCFA) :", min_value=0, step=5000)
-                m_file = st.file_uploader("Charger la photo depuis votre ordinateur :", type=["png", "jpg", "jpeg"])
-                
+                m_file = st.file_uploader("Photo :", type=["png", "jpg", "jpeg"])
                 if st.form_submit_button("Mettre en vitrine"):
                     if m_nom and m_file:
                         bytes_data = m_file.getvalue()
                         b64_img = base64.b64encode(bytes_data).decode("utf-8")
                         ext = m_file.name.split(".")[-1]
-                        final_img = f"data:image/{ext};base64,{b64_img}"
-                        
-                        donnees["modeles"].append({
-                            "id": f"mod_{len(donnees['modeles'])+1}",
-                            "nom": m_nom, "description": m_desc, "prix": int(m_prix), "image": final_img
-                        })
+                        donnees["modeles"].append({"id": f"mod_{len(donnees['modeles'])+1}", "nom": m_nom, "description": m_desc, "prix": int(m_prix), "image": f"data:image/{ext};base64,{b64_img}"})
                         sauvegarder_donnees(donnees)
                         st.success("Publié !")
                         st.rerun()
 
         with tab2:
-            st.write("### 🗑️ Supprimer des modèles de la vitrine")
             modeles = donnees.get("modeles", [])
             if modeles:
                 for idx, mod in enumerate(modeles):
@@ -358,109 +345,53 @@ elif st.session_state.page_actuelle == "⚙️ PARAMÈTRES":
                         if st.button("❌ Supprimer", key=f"del_admin_{mod['id']}"):
                             modeles.pop(idx)
                             sauvegarder_donnees(donnees)
-                            st.success(f"{mod['nom']} supprimé !")
                             st.rerun()
-            else:
-                st.info("Aucun modèle enregistré.")
 
         with tab3:
             st.write("### 👥 Annuaire et Base de données Clients")
-            recherche = st.text_input("🔍 Rechercher un client (Nom ou Numéro) :", key="search_input_client").strip().upper()
-            
+            recherche = st.text_input("🔍 Rechercher un client :").strip().upper()
             clients_dict = donnees.get("clients", {})
-            commandes_dict = donnees.get("commandes", {})
-            modeles_liste = donnees.get("modeles", [])
             
-            if not clients_dict:
-                st.info("Aucun client n'est encore enregistré dans la base.")
-            else:
+            if clients_dict:
                 for nom_client, infos in list(clients_dict.items()):
                     tel_client = infos.get('telephone', 'Non renseigné')
+                    if recherche and (recherche not in nom_client) and (recherche not in str(tel_client)): continue
                     
-                    if recherche and (recherche not in nom_client) and (recherche not in str(tel_client)):
-                        continue
-                        
-                    cmds_client = {id_cmd: cmd for id_cmd, cmd in commandes_dict.items() if str(cmd.get('client', '')).upper() == nom_client}
-                    indicateur_commande = "🟢 OUI" if cmds_client else "🔴 NON"
-                    
-                    with st.expander(f"👤 {nom_client} | 📞 {tel_client} | Commande en cours : {indicateur_commande}"):
-                        
-                        # Affichage de la photo de profil du client pour l'administrateur (Toi)
+                    with st.expander(f"👤 {nom_client} | 📞 {tel_client}"):
                         photo_p = infos.get("photo_profil", "")
-                        if photo_p:
-                            st.image(photo_p, caption=f"Photo de profil de {nom_client}", width=120)
+                        if photo_p: st.image(photo_p, width=120)
                         
-                        # Formulaire pour que toi aussi tu puisses éditer ses mesures en direct
                         with st.form(f"form_admin_edit_{nom_client}"):
                             nv_tel_admin = st.text_input("Téléphone :", value=tel_client, key=f"ad_tel_{nom_client}")
-                            
                             col_h, col_b = st.columns(2)
-                            champs_haut = ["Épaule", "Longueur de Manche", "Tour de Manche", "Poitrine", "Ventre", "Longueur Haut", "Col", "Dos"]
-                            champs_bas = ["Ceinture", "Bassin", "Cuisse", "Longueur Bas", "Mollet", "Bas", "Frappe"]
-                            
-                            mesures_haut_admin = {}
-                            mesures_bas_admin = {}
+                            mesures_haut_admin, mesures_bas_admin = {}, {}
                             
                             with col_h:
                                 st.markdown("**📏 Haut du corps :**")
                                 for m in champs_haut:
                                     v = infos.get("mesures_haut", {}).get(m, 0.0)
                                     mesures_haut_admin[m] = st.number_input(f"{m} (cm)", value=float(v), step=0.5, key=f"ad_h_{m}_{nom_client}")
-                                    
                             with col_b:
                                 st.markdown("**📐 Bas du corps :**")
                                 for m in champs_bas:
                                     v = infos.get("mesures_bas", {}).get(m, 0.0)
                                     mesures_bas_admin[m] = st.number_input(f"{m} (cm)", value=float(v), step=0.5, key=f"ad_b_{m}_{nom_client}")
                             
-                            if st.form_submit_button("💾 Enregistrer les modifications pour ce client"):
-                                donnees["clients"][nom_client]["telephone"] = nv_tel_admin
-                                donnees["clients"][nom_client]["mesures_haut"] = mesures_haut_admin
-                                donnees["clients"][nom_client]["mesures_bas"] = mesures_bas_admin
+                            if st.form_submit_button("💾 Sauvegarder pour ce client"):
+                                donnees["clients"][nom_client] = {"telephone": nv_tel_admin, "mesures_haut": mesures_haut_admin, "mesures_bas": mesures_bas_admin, "photo_profil": photo_p}
                                 sauvegarder_donnees(donnees)
-                                st.success("Données du client mises à jour !")
+                                st.success("Mis à jour sur GitHub !")
                                 st.rerun()
 
-                        if cmds_client:
-                            st.markdown("---")
-                            st.markdown("#### 📦 Détails de la commande :")
-                            for id_cmd, cmd in cmds_client.items():
-                                nom_modele_commande = cmd['modele']
-                                photo_modele = None
-                                for mod in modeles_liste:
-                                    if mod["nom"] == nom_modele_commande:
-                                        photo_modele = mod["image"]
-                                        break
-                                
-                                col_txt, col_img = st.columns([3, 1])
-                                with col_txt:
-                                    st.info(f"""
-                                    **N° Commande :** {id_cmd}  
-                                    **Nom du modèle :** {nom_modele_commande}  
-                                    **Prix :** {cmd['prix']} FCFA  
-                                    **Statut actuel :** {cmd['statut']}
-                                    """)
-                                with col_img:
-                                    if photo_modele:
-                                        st.image(photo_modele, caption="Modèle choisi", use_container_width=True)
-
         with tab4:
-            st.write("### 📦 Mettre à jour l'évolution des commandes")
             commandes_dict = donnees.get("commandes", {})
             if commandes_dict:
                 for id_cmd, cmd in list(commandes_dict.items()):
-                    with st.expander(f"⚙️ Commande {id_cmd} — Client : {cmd['client']}"):
-                        st.write(f"**Modèle commandé :** {cmd['modele']}")
-                        st.write(f"**Prix total :** {cmd['prix']} FCFA")
-                        
-                        nv_avance = st.number_input(f"Avance reçue (FCFA) :", value=int(cmd.get('avance', 0)), step=5000, key=f"av_{id_cmd}")
-                        nv_statut = st.selectbox(f"Statut confection :", ["En attente", "En coupe", "Au montage", "Finitions", "Prêt !"], index=["En attente", "En coupe", "Au montage", "Finitions", "Prêt !"].index(cmd.get('statut', 'En attente')), key=f"st_{id_cmd}")
-                        
-                        if st.button("💾 Mettre à jour la commande", key=f"save_{id_cmd}"):
+                    with st.expander(f"⚙️ Commande {id_cmd} — {cmd['client']}"):
+                        nv_avance = st.number_input(f"Avance reçu :", value=int(cmd.get('avance', 0)), key=f"av_{id_cmd}")
+                        nv_statut = st.selectbox(f"Statut :", ["En attente", "En coupe", "Au montage", "Finitions", "Prêt !"], index=["En attente", "En coupe", "Au montage", "Finitions", "Prêt !"].index(cmd.get('statut', 'En attente')), key=f"st_{id_cmd}")
+                        if st.button("💾 Mettre à jour", key=f"save_{id_cmd}"):
                             donnees["commandes"][id_cmd]["avance"] = int(nv_avance)
                             donnees["commandes"][id_cmd]["statut"] = nv_statut
                             sauvegarder_donnees(donnees)
-                            st.success("Statut de la commande mis à jour !")
                             st.rerun()
-            else:
-                st.info("Aucune commande en cours à l'atelier.")
