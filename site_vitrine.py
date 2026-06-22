@@ -51,7 +51,7 @@ def connexion_client(nom, tel):
     if nom_clean:
         st.session_state.client_connecte = nom_clean
         if nom_clean not in donnees["clients"]:
-            donnees["clients"][nom_clean] = {"telephone": tel, "mesures_haut": {}, "mesures_bas": {}}
+            donnees["clients"][nom_clean] = {"telephone": tel, "mesures_haut": {}, "mesures_bas": {}, "photo_profil": ""}
             sauvegarder_donnees(donnees)
         st.session_state.page_actuelle = "ACCUEIL"
         st.session_state.nav_radio = "ACCUEIL"
@@ -195,11 +195,21 @@ elif st.session_state.page_actuelle == "MON PROFIL & PANIER":
         tab_profil, tab_panier = st.tabs(["👤 Mes Informations & Mesures", "🛒 Mon Panier d'Achat"])
         
         with tab_profil:
-            client_data = donnees["clients"].get(nom_c, {"telephone": "", "mesures_haut": {}, "mesures_bas": {}})
+            client_data = donnees["clients"].get(nom_c, {"telephone": "", "mesures_haut": {}, "mesures_bas": {}, "photo_profil": ""})
             st.write(f"**Téléphone enregistré :** {client_data.get('telephone', 'Non renseigné')}")
+            
+            # Affichage de la photo actuelle si elle existe
+            photo_actuelle = client_data.get("photo_profil", "")
+            if photo_actuelle:
+                st.image(photo_actuelle, caption="Votre photo de profil actuelle", width=150)
             
             with st.form("modif_mesures_client"):
                 nv_tel = st.text_input("Mettre à jour mon téléphone :", value=client_data.get("telephone", ""))
+                
+                # Nouveau champ pour charger la photo de profil
+                st.markdown("##### 📷 Ma Photo de Profil")
+                fichier_photo = st.file_uploader("Choisissez une photo de vous (JPG ou PNG) :", type=["png", "jpg", "jpeg"])
+                
                 colh, colb = st.columns(2)
                 mesures_haut_maj = {}
                 mesures_bas_maj = {}
@@ -218,9 +228,20 @@ elif st.session_state.page_actuelle == "MON PROFIL & PANIER":
                         mesures_bas_maj[m] = st.number_input(f"{m} :", value=float(val_m), step=0.5, key=f"cl_b_{m}")
                 
                 if st.form_submit_button("Enregistrer mes modifications"):
-                    donnees["clients"][nom_c] = {"telephone": nv_tel, "mesures_haut": mesures_haut_maj, "mesures_bas":  mesures_bas_maj}
+                    if fichier_photo:
+                        bytes_data = fichier_photo.getvalue()
+                        b64_img = base64.b64encode(bytes_data).decode("utf-8")
+                        ext = fichier_photo.name.split(".")[-1]
+                        photo_actuelle = f"data:image/{ext};base64,{b64_img}"
+                    
+                    donnees["clients"][nom_c] = {
+                        "telephone": nv_tel, 
+                        "mesures_haut": mesures_haut_maj, 
+                        "mesures_bas": mesures_bas_maj,
+                        "photo_profil": photo_actuelle
+                    }
                     sauvegarder_donnees(donnees)
-                    st.success("Profil mis à jour avec succès !")
+                    st.success("Profil et photo mis à jour avec succès !")
                     st.rerun()
             
         with tab_panier:
@@ -355,6 +376,12 @@ elif st.session_state.page_actuelle == "⚙️ PARAMÈTRES":
                     indicateur_commande = "🟢 OUI" if cmds_client else "🔴 NON"
                     
                     with st.expander(f"👤 {nom_client} | 📞 {tel_client} | Commande en cours : {indicateur_commande}"):
+                        # Affichage de la photo de profil du client dans sa fiche d'administration
+                        photo_p = infos.get("photo_profil", "")
+                        if photo_p:
+                            st.image(photo_p, caption=f"Photo de profil de {nom_client}", width=120)
+                            st.write("")
+                            
                         col_h, col_b = st.columns(2)
                         with col_h:
                             st.markdown("**📏 Haut du corps :**")
