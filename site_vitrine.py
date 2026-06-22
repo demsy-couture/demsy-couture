@@ -15,15 +15,21 @@ FICHIER_DONNEES = "donnees_atelier.json"
 MOT_DE_PASSE_ADMIN = "16129489f"
 
 def charger_donnees():
+    structure_vide = {"configuration": {}, "modeles": [], "clients": {}, "commandes": {}}
     if os.path.exists(FICHIER_DONNEES):
         with open(FICHIER_DONNEES, "r", encoding="utf-8") as f:
             try:
                 contenu = f.read().strip()
                 if contenu:
-                    return json.loads(contenu)
+                    donnees_chargees = json.loads(contenu)
+                    # Sécurité : s'assurer que toutes les clés de base existent
+                    for cle in structure_vide:
+                        if cle not in donnees_chargees:
+                            donnees_chargees[cle] = structure_vide[cle]
+                    return donnees_chargees
             except Exception as e:
                 st.error(f"Erreur de lecture de la base de données : {e}")
-    return {"configuration": {}, "modeles": [], "clients": {}, "commandes": {}}
+    return structure_vide
 
 def sauvegarder_donnees(donnees):
     with open(FICHIER_DONNEES, "w", encoding="utf-8") as f:
@@ -66,8 +72,13 @@ if "panier" not in st.session_state:
 if "admin_authentifie" not in st.session_state:
     st.session_state.admin_authentifie = False
 
-# --- NAVIGATION SIDEBAR ---
-st.sidebar.markdown('<div style="color: #d4af37; font-size: 22px; font-weight: bold; text-align: center; margin-bottom: 5px; letter-spacing: 1px; font-family: \'Playfair Display\', serif;">DEMSY<br><span style="font-size:12px; color:#aaa;">COUTURE AU MASCULIN</span></div>', unsafe_allow_html=True)
+# Affichage du logo officiel en haut de la barre latérale
+if os.path.exists("logo.jpg"):
+    st.sidebar.image("logo.jpg", use_container_width=True)
+else:
+    # Texte de secours si l'image n'est pas encore détectée
+    st.sidebar.markdown('<div style="color: #d4af37; font-size: 22px; font-weight: bold; text-align: center; margin-bottom: 5px; letter-spacing: 1px; font-family: \'Playfair Display\', serif;">DEMSY<br><span style="font-size:12px; color:#aaa;">COUTURE AU MASCULIN</span></div>', unsafe_allow_html=True)
+
 st.sidebar.write("---")
 
 st.sidebar.write("### 🔑 Espace Client")
@@ -83,7 +94,6 @@ st.sidebar.write("---")
 theme_choisi = st.sidebar.selectbox("🎨 Style visuel :", ["Sombre & Or", "Clair & Prestige"])
 st.sidebar.write("---")
 
-# Gestion de l'index du menu radio basé sur la session globale
 if st.session_state.page_actuelle in liste_pages:
     index_page = liste_pages.index(st.session_state.page_actuelle)
 else:
@@ -193,8 +203,8 @@ elif st.session_state.page_actuelle == "MON PROFIL & PANIER":
                 colh, colb = st.columns(2)
                 mesures_haut_maj = {}
                 mesures_bas_maj = {}
-                champs_haut = ["Epaule", "Longueurr de manche", "Tour de manche", "Poitrine", "ventre", "Longueure haut", "Cole", "dos"]
-                champs_bas = ["Ceinture", "Bassin", "Cuisse", "Longueur bas", "Mollet", "Bas", "Frappe"]
+                champs_haut = ["Cou", "Poitrine", "Épaule", "Longueur Manche", "Tour de Bras"]
+                champs_bas = ["Taille", "Hanche", "Cuisse", "Longueur Pantalon", "Entrejambe"]
                 
                 with colh:
                     st.markdown("##### 📏 Haut du corps (en cm)")
@@ -265,7 +275,6 @@ elif st.session_state.page_actuelle == "⚙️ PARAMÈTRES":
     st.button("⬅️ Retour à l'Accueil", key="btn_ret_admin", on_click=changer_page, args=("ACCUEIL",))
     st.markdown("<h1 style='color: #d4af37;'>WORKSHOP INTERFACE (PRO)</h1>", unsafe_allow_html=True)
     
-    # --- FORMULAIRE DE CONNEXION SÉCURISÉ POUR L'ADMIN ---
     if not st.session_state.admin_authentifie:
         with st.form("login_admin_form"):
             st.write("🔑 Entrez le code secret pour accéder à la gestion de l'atelier :")
@@ -280,80 +289,11 @@ elif st.session_state.page_actuelle == "⚙️ PARAMÈTRES":
                 else:
                     st.error("❌ Code secret incorrect.")
                     
-    # --- INTERFACE DE GESTION (S'affiche uniquement si authentifié) ---
     if st.session_state.admin_authentifie:
         if st.button("🔒 Se déconnecter de l'Atelier", key="btn_logout_admin"):
             st.session_state.admin_authentifie = False
             st.rerun()
             
-        # NOUVEAUTÉ : On crée 4 onglets, dont un dédié à la Base Clients
-        tab1, tab2, tab3, tab4 = st.tabs(["🧥 Ajouter un modèle", "🗑️ Gérer la vitrine", "👥 Base Clients", "📦 Suivi Commandes"])
-        
-        with tab1:
-            with st.form("form_pub_modele"):
-                m_nom = st.text_input("Nom de la création :")
-                m_desc = st.text_area("Description :")
-                m_prix = st.number_input("Prix (FCFA) :", min_value=0, step=5000)
-                m_file = st.file_uploader("Charger la photo depuis votre ordinateur :", type=["png", "jpg", "jpeg"])
-                
-                if st.form_submit_button("Mettre en vitrine"):
-                    if m_nom and m_file:
-                        bytes_data = m_file.getvalue()
-                        b64_img = base64.b64encode(bytes_data).decode("utf-8")
-                        ext = m_file.name.split(".")[-1]
-                        final_img = f"data:image/{ext};base64,{b64_img}"
-                        
-                        donnees["modeles"].append({
-                            "id": f"mod_{len(donnees['modeles'])+1}",
-                            "nom": m_nom, "description": m_desc, "prix": int(m_prix), "image": final_img
-                        })
-                        sauvegarder_donnees(donnees)
-                        st.success("Publié !")
-                        st.rerun()
-
-        with tab2:
-            st.write("### 🗑️ Supprimer des modèles de la vitrine")
-            modeles = donnees.get("modeles", [])
-            if modeles:
-                for idx, mod in enumerate(modeles):
-                    col_m1, col_m2 = st.columns([4, 1])
-                    with col_m1: st.write(f"👔 **{mod['nom']}** — {mod['prix']} FCFA")
-                    with col_m2:
-                        if st.button("❌ Supprimer", key=f"del_admin_{mod['id']}"):
-                            donnees["modeles"].pop(idx)
-                            sauvegarder_donnees(donnees)
-                            st.success(f"{mod['nom']} supprimé !")
-                            st.rerun()
-            else:
-                st.info("Aucun modèle enregistré.")
-
-      # 5. PARAMÈTRES (ADMIN)
-elif st.session_state.page_actuelle == "⚙️ PARAMÈTRES":
-    st.button("⬅️ Retour à l'Accueil", key="btn_ret_admin", on_click=changer_page, args=("ACCUEIL",))
-    st.markdown("<h1 style='color: #d4af37;'>WORKSHOP INTERFACE (PRO)</h1>", unsafe_allow_html=True)
-    
-    # --- FORMULAIRE DE CONNEXION SÉCURISÉ POUR L'ADMIN ---
-    if not st.session_state.admin_authentifie:
-        with st.form("login_admin_form"):
-            st.write("🔑 Entrez le code secret pour accéder à la gestion de l'atelier :")
-            mdp_saisi = st.text_input("Code secret :", type="password", key="admin_password_field")
-            bouton_valider = st.form_submit_button("🔓 Valider le mot de passe", use_container_width=True)
-            
-            if bouton_valider:
-                if mdp_saisi == MOT_DE_PASSE_ADMIN:
-                    st.session_state.admin_authentifie = True
-                    st.success("Accès autorisé !")
-                    st.rerun()
-                else:
-                    st.error("❌ Code secret incorrect.")
-                    
-    # --- INTERFACE DE GESTION (S'affiche uniquement si authentifié) ---
-    if st.session_state.admin_authentifie:
-        if st.button("🔒 Se déconnecter de l'Atelier", key="btn_logout_admin"):
-            st.session_state.admin_authentifie = False
-            st.rerun()
-            
-        # Création des 4 onglets alignés
         tab1, tab2, tab3, tab4 = st.tabs(["🧥 Ajouter un modèle", "🗑️ Gérer la vitrine", "👥 Base Clients", "📦 Suivi Commandes"])
         
         with tab1:
@@ -396,9 +336,7 @@ elif st.session_state.page_actuelle == "⚙️ PARAMÈTRES":
 
         with tab3:
             st.write("### 👥 Annuaire et Base de données Clients")
-            
-            # FILTRE DE RECHERCHE
-            recherche = st.text_input("🔍 Rechercher un client (Nom ou Numéro de téléphone) :").strip().upper()
+            recherche = st.text_input("🔍 Rechercher un client (Nom ou Numéro) :", key="search_input_client").strip().upper()
             
             clients_dict = donnees.get("clients", {})
             commandes_dict = donnees.get("commandes", {})
@@ -410,19 +348,18 @@ elif st.session_state.page_actuelle == "⚙️ PARAMÈTRES":
                 for nom_client, infos in clients_dict.items():
                     tel_client = infos.get('telephone', 'Non renseigné')
                     
-                    if recherche and (recherche not in nom_client) and (recherche not in tel_client):
+                    if recherche and (recherche not in nom_client) and (recherche not in str(tel_client)):
                         continue
                         
-                    cmds_client = {id_cmd: cmd for id_cmd, cmd in commandes_dict.items() if cmd['client'] == nom_client}
+                    cmds_client = {id_cmd: cmd for id_cmd, cmd in commandes_dict.items() if str(cmd.get('client', '')).upper() == nom_client}
                     indicateur_commande = "🟢 OUI" if cmds_client else "🔴 NON"
                     
                     with st.expander(f"👤 {nom_client} | 📞 {tel_client} | Commande en cours : {indicateur_commande}"):
                         col_h, col_b = st.columns(2)
-                        
                         with col_h:
                             st.markdown("**📏 Haut du corps :**")
                             mesures_haut = infos.get("mesures_haut", {})
-                            if mesures_haut:
+                            if mesures_haut and any(v > 0 for v in mesures_haut.values()):
                                 for k, v in mesures_haut.items():
                                     if v > 0: st.write(f"- {k} : {v} cm")
                             else:
@@ -431,7 +368,7 @@ elif st.session_state.page_actuelle == "⚙️ PARAMÈTRES":
                         with col_b:
                             st.markdown("**📐 Bas du corps :**")
                             mesures_bas = infos.get("mesures_bas", {})
-                            if mesures_bas:
+                            if mesures_bas and any(v > 0 for v in mesures_bas.values()):
                                 for k, v in mesures_bas.items():
                                     if v > 0: st.write(f"- {k} : {v} cm")
                             else:
@@ -442,7 +379,6 @@ elif st.session_state.page_actuelle == "⚙️ PARAMÈTRES":
                             st.markdown("#### 📦 Détails de la commande :")
                             for id_cmd, cmd in cmds_client.items():
                                 nom_modele_commande = cmd['modele']
-                                
                                 photo_modele = None
                                 for mod in modeles_liste:
                                     if mod["nom"] == nom_modele_commande:
