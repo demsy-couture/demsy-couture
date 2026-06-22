@@ -200,14 +200,6 @@
             "avance": 0,
             "statut": "En attente",
             "date_livraison": "À définir"
-        },
-        "CMD-106": {
-            "client": "KASHIF",
-            "modele": "COSTUME",
-            "prix": 40000,
-            "avance": 0,
-            "statut": "En attente",
-            "date_livraison": "À définir"
         }
     }
 }
