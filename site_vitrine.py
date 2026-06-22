@@ -327,7 +327,74 @@ elif st.session_state.page_actuelle == "⚙️ PARAMÈTRES":
             else:
                 st.info("Aucun modèle enregistré.")
 
-       with tab3:
+      # 5. PARAMÈTRES (ADMIN)
+elif st.session_state.page_actuelle == "⚙️ PARAMÈTRES":
+    st.button("⬅️ Retour à l'Accueil", key="btn_ret_admin", on_click=changer_page, args=("ACCUEIL",))
+    st.markdown("<h1 style='color: #d4af37;'>WORKSHOP INTERFACE (PRO)</h1>", unsafe_allow_html=True)
+    
+    # --- FORMULAIRE DE CONNEXION SÉCURISÉ POUR L'ADMIN ---
+    if not st.session_state.admin_authentifie:
+        with st.form("login_admin_form"):
+            st.write("🔑 Entrez le code secret pour accéder à la gestion de l'atelier :")
+            mdp_saisi = st.text_input("Code secret :", type="password", key="admin_password_field")
+            bouton_valider = st.form_submit_button("🔓 Valider le mot de passe", use_container_width=True)
+            
+            if bouton_valider:
+                if mdp_saisi == MOT_DE_PASSE_ADMIN:
+                    st.session_state.admin_authentifie = True
+                    st.success("Accès autorisé !")
+                    st.rerun()
+                else:
+                    st.error("❌ Code secret incorrect.")
+                    
+    # --- INTERFACE DE GESTION (S'affiche uniquement si authentifié) ---
+    if st.session_state.admin_authentifie:
+        if st.button("🔒 Se déconnecter de l'Atelier", key="btn_logout_admin"):
+            st.session_state.admin_authentifie = False
+            st.rerun()
+            
+        # Création des 4 onglets alignés
+        tab1, tab2, tab3, tab4 = st.tabs(["🧥 Ajouter un modèle", "🗑️ Gérer la vitrine", "👥 Base Clients", "📦 Suivi Commandes"])
+        
+        with tab1:
+            with st.form("form_pub_modele"):
+                m_nom = st.text_input("Nom de la création :")
+                m_desc = st.text_area("Description :")
+                m_prix = st.number_input("Prix (FCFA) :", min_value=0, step=5000)
+                m_file = st.file_uploader("Charger la photo depuis votre ordinateur :", type=["png", "jpg", "jpeg"])
+                
+                if st.form_submit_button("Mettre en vitrine"):
+                    if m_nom and m_file:
+                        bytes_data = m_file.getvalue()
+                        b64_img = base64.b64encode(bytes_data).decode("utf-8")
+                        ext = m_file.name.split(".")[-1]
+                        final_img = f"data:image/{ext};base64,{b64_img}"
+                        
+                        donnees["modeles"].append({
+                            "id": f"mod_{len(donnees['modeles'])+1}",
+                            "nom": m_nom, "description": m_desc, "prix": int(m_prix), "image": final_img
+                        })
+                        sauvegarder_donnees(donnees)
+                        st.success("Publié !")
+                        st.rerun()
+
+        with tab2:
+            st.write("### 🗑️ Supprimer des modèles de la vitrine")
+            modeles = donnees.get("modeles", [])
+            if modeles:
+                for idx, mod in enumerate(modeles):
+                    col_m1, col_m2 = st.columns([4, 1])
+                    with col_m1: st.write(f"👔 **{mod['nom']}** — {mod['prix']} FCFA")
+                    with col_m2:
+                        if st.button("❌ Supprimer", key=f"del_admin_{mod['id']}"):
+                            modeles.pop(idx)
+                            sauvegarder_donnees(donnees)
+                            st.success(f"{mod['nom']} supprimé !")
+                            st.rerun()
+            else:
+                st.info("Aucun modèle enregistré.")
+
+        with tab3:
             st.write("### 👥 Annuaire et Base de données Clients")
             
             # FILTRE DE RECHERCHE
@@ -343,19 +410,15 @@ elif st.session_state.page_actuelle == "⚙️ PARAMÈTRES":
                 for nom_client, infos in clients_dict.items():
                     tel_client = infos.get('telephone', 'Non renseigné')
                     
-                    # Logique du filtre
                     if recherche and (recherche not in nom_client) and (recherche not in tel_client):
-                        continue # Passe au client suivant si ça ne correspond pas à la recherche
+                        continue
                         
-                    # Vérifier si le client a une commande en cours
                     cmds_client = {id_cmd: cmd for id_cmd, cmd in commandes_dict.items() if cmd['client'] == nom_client}
                     indicateur_commande = "🟢 OUI" if cmds_client else "🔴 NON"
                     
-                    # ACCORDÉON (Clic pour ouvrir le profil)
                     with st.expander(f"👤 {nom_client} | 📞 {tel_client} | Commande en cours : {indicateur_commande}"):
                         col_h, col_b = st.columns(2)
                         
-                        # Affichage des mesures
                         with col_h:
                             st.markdown("**📏 Haut du corps :**")
                             mesures_haut = infos.get("mesures_haut", {})
@@ -369,26 +432,23 @@ elif st.session_state.page_actuelle == "⚙️ PARAMÈTRES":
                             st.markdown("**📐 Bas du corps :**")
                             mesures_bas = infos.get("mesures_bas", {})
                             if mesures_bas:
-                                Government IDs for k, v in mesures_bas.items():
+                                for k, v in mesures_bas.items():
                                     if v > 0: st.write(f"- {k} : {v} cm")
                             else:
                                 st.write("Aucune mesure")
                         
-                        # Affichage des commandes spécifiques à ce client avec PHOTO, NOM et PRIX
                         if cmds_client:
                             st.markdown("---")
                             st.markdown("#### 📦 Détails de la commande :")
                             for id_cmd, cmd in cmds_client.items():
                                 nom_modele_commande = cmd['modele']
                                 
-                                # Recherche de la photo correspondante dans les modèles existants
                                 photo_modele = None
                                 for mod in modeles_liste:
                                     if mod["nom"] == nom_modele_commande:
                                         photo_modele = mod["image"]
                                         break
                                 
-                                # Organisation de l'affichage de la commande
                                 col_txt, col_img = st.columns([3, 1])
                                 with col_txt:
                                     st.info(f"""
@@ -401,7 +461,7 @@ elif st.session_state.page_actuelle == "⚙️ PARAMÈTRES":
                                     if photo_modele:
                                         st.image(photo_modele, caption="Modèle choisi", use_container_width=True)
                                     else:
-                                        st.caption("📷 (Pas de photo disponible)")
+                                        st.caption("📷 (Pas de photo)")
 
         with tab4:
             st.write("### 📦 Mettre à jour l'évolution des commandes")
@@ -412,7 +472,6 @@ elif st.session_state.page_actuelle == "⚙️ PARAMÈTRES":
                         st.write(f"**Modèle commandé :** {cmd['modele']}")
                         st.write(f"**Prix total :** {cmd['prix']} FCFA")
                         
-                        # Modification du statut et de l'avance
                         nv_avance = st.number_input(f"Avance reçue (FCFA) :", value=int(cmd.get('avance', 0)), step=5000, key=f"av_{id_cmd}")
                         nv_statut = st.selectbox(f"Statut confection :", ["En attente", "En coupe", "Au montage", "Finitions", "Prêt !"], index=["En attente", "En coupe", "Au montage", "Finitions", "Prêt !"].index(cmd.get('statut', 'En attente')), key=f"st_{id_cmd}")
                         
