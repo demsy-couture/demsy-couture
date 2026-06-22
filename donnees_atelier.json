@@ -7,7 +7,7 @@
         "contact_email": "kasifuakanjiolaboye@gmail.com",
         "adresse": "Abidjan, abobo cie nord, Côte d'Ivoire"
     },
-   "modeles": [],
+    "modeles": [],
     "clients": {
         "DÉMÉTRIUS SISSOKO": {
             "telephone": "+225 01 23 45 67 89",
@@ -30,6 +30,12 @@
                 "Bas": 20,
                 "Frappe": 82
             }
+        },
+        "KASHIF": {
+            "telephone": "",
+            "mesures_haut": {},
+            "mesures_bas": {},
+            "photo_profil": ""
         }
     },
     "commandes": {}
