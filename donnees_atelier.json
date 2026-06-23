@@ -191,14 +191,5 @@
             "photo_profil": ""
         }
     },
-    "commandes": {
-        "CMD-102": {
-            "client": "KASHIF",
-            "modele": "TUNIQUE ENFANT ",
-            "prix": 11000,
-            "avance": 0,
-            "statut": "En attente",
-            "date_livraison": "À définir"
-        }
-    }
+    "commandes": {}
 }
