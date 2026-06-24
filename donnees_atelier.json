@@ -196,8 +196,8 @@
             "client": "NASIF",
             "modele": "CHEMISE",
             "prix": 7000,
-            "avance": 0,
-            "statut": "En attente",
+            "avance": 1,
+            "statut": "Au montage",
             "date_livraison": "À définir"
         }
     }
