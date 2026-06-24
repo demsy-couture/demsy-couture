@@ -191,5 +191,14 @@
             "photo_profil": ""
         }
     },
-    "commandes": {}
+    "commandes": {
+        "CMD-101": {
+            "client": "NASIF",
+            "modele": "CHEMISE",
+            "prix": 7000,
+            "avance": 0,
+            "statut": "En attente",
+            "date_livraison": "À définir"
+        }
+    }
 }
